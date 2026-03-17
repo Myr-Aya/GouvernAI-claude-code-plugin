@@ -1,4 +1,4 @@
-# 🛡️ Agent Guardrails — Claude Code Plugin
+# 🛡️ GouvernAI — Claude Code Plugin
 
 Runtime guardrails for AI agents. Classifies every sensitive action by risk tier, enforces proportional controls, blocks dangerous actions with hard constraints, and logs a full audit trail.
 
@@ -8,11 +8,11 @@ Runtime guardrails for AI agents. Classifies every sensitive action by risk tier
 
 ```bash
 # From GitHub
-/plugin install github.com/myr-aya/gouvernai-claude-code-plugin
+/plugin install gouvernai@gouvernai
 
 # Or clone and install locally
-git clone https://github.com/myr-aya/gouvernai-claude-code-plugin.git
-/plugin install ./gouvernai-claude-code-plugin
+git clone https://github.com/Myr-Aya/GouvernAI-claude-code-plugin.git
+/plugin install ./GouvernAI-claude-code-plugin
 ```
 
 After install, guardrails activate automatically on the next session. No configuration required.
@@ -74,11 +74,11 @@ Skills are probabilistic — Claude uses judgment about when to apply them. On c
 ## Plugin structure
 
 ```
-agent-guardrails/
+gouvernai/
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin metadata
 ├── skills/
-│   └── agent-guardrails/
+│   └── gouvernai/
 │       ├── SKILL.md             # Gate orchestrator (always loaded)
 │       ├── ACTIONS.md           # Action → tier classification lookup
 │       ├── TIERS.md             # Universal controls + escalation rules
@@ -116,10 +116,10 @@ In February 2026, Check Point Research disclosed CVEs allowing RCE through Claud
 
 ```bash
 # User scope (default, recommended)
-/plugin install github.com/mindxo/agent-guardrails
+/plugin install gouvernai@gouvernai
 
 # Project scope (only if you trust all contributors)
-/plugin install github.com/mindxo/agent-guardrails --scope project
+/plugin install gouvernai@gouvernai --scope project
 ```
 
 ## Limitations
