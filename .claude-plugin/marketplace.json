@@ -6,7 +6,7 @@
     {
       "name": "gouvernai-claude-code",
       "description": "Runtime guardrails for Claude Code. Classifies actions by risk tier, enforces proportional controls, blocks dangerous operations, and logs audit trails.",
-      "version": "5.0.0",
+      "version": "0.0.1",
       "source": {
         "source": "github",
         "repo": "Myr-Aya/GouvernAI-claude-code-plugin"
