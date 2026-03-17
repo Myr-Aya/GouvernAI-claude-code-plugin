@@ -7,13 +7,11 @@ Runtime guardrails for AI agents. Classifies every sensitive action by risk tier
 ## Install
 
 ```bash
-# From GitHub
-/plugin install gouvernai@gouvernai
+# Add the marketplace first
+claude plugin marketplace add Myr-Aya/GouvernAI-claude-code-plugin
 
-# Or clone and install locally
-git clone https://github.com/Myr-Aya/GouvernAI-claude-code-plugin.git
-/plugin install ./GouvernAI-claude-code-plugin
-```
+# Then install the plugin
+claude plugin install gouvernai@mindxo
 
 After install, guardrails activate automatically on the next session. No configuration required.
 
