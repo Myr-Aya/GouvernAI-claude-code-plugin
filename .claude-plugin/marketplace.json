@@ -1,4 +1,5 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "gouvernai",
   "owner": {
     "name": "Myr-Aya"
@@ -9,10 +10,7 @@
       "name": "GouvernAI",
       "description": "Runtime guardrails for Claude Code. Classifies actions by risk tier, enforces proportional controls, blocks dangerous operations, and logs audit trails.",
       "version": "0.0.1",
-      "source": {
-        "source": "github",
-        "repo": "Myr-Aya/GouvernAI-claude-code-plugin"
-      },
+      "source": ".",
       "tags": ["security", "guardrails", "governance"],
       "category": "Security"
     }
