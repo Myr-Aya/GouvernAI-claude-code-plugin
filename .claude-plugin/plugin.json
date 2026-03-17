@@ -1,11 +1,10 @@
 {
-  "name": "gouvernai-claude-code",
+  "name": "gouvernai",
   "version": "0.0.1",
   "description": "Runtime guardrails for Claude Code. Classifies every sensitive action by risk tier, enforces proportional controls (notify / approve / halt), blocks dangerous operations with hard constraints, and logs a full audit trail. Zero dependencies. One install.",
   "author": {
-    "name": "Myr-Aya",
-    "url": "https://mind-xo.com"
-  },
+    "name": "Myr-Aya"
+    },
   "repository": "https://github.com/Myr-Aya/GouvernAI-claude-code-plugin",
   "homepage": "https://mind-xo.com",
   "license": "MIT",
