@@ -8,11 +8,11 @@ Runtime guardrails for AI agents. Classifies every sensitive action by risk tier
 
 ```bash
 # From GitHub
-/plugin install github.com/mindxo/agent-guardrails
+/plugin install github.com/myr-aya/gouvernai-claude-code-plugin
 
 # Or clone and install locally
-git clone https://github.com/mindxo/agent-guardrails.git
-/plugin install ./agent-guardrails
+git clone https://github.com/myr-aya/gouvernai-claude-code-plugin.git
+/plugin install ./gouvernai-claude-code-plugin
 ```
 
 After install, guardrails activate automatically on the next session. No configuration required.
