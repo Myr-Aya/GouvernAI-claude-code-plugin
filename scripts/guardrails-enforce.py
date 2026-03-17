@@ -130,16 +130,16 @@ def check_bash_self_modification(command):
     """NEVER rule 3: Never self-modify guardrails files via Bash."""
     # Normalize backslashes so Windows paths match too
     cmd = command.replace("\\", "/")
-    if "agent-guardrails" not in cmd:
+    if not any(marker in cmd for marker in PLUGIN_DIR_MARKERS):
         return False
     # Redirect writes: > or >> targeting a guardrails path
-    if re.search(r'>{1,2}\s*\S*agent-guardrails', cmd):
+    if re.search(r'>{1,2}\s*\S*(?:agent-guardrails|gouvernai)', cmd):
         return True
     # sed -i editing a guardrails file
-    if re.search(r'sed\s+.*-[a-zA-Z]*i[a-zA-Z]*.*agent-guardrails', cmd, re.IGNORECASE):
+    if re.search(r'sed\s+.*-[a-zA-Z]*i[a-zA-Z]*.*(?:agent-guardrails|gouvernai)', cmd, re.IGNORECASE):
         return True
     # cp / mv / tee writing into a guardrails path
-    if re.search(r'\b(cp|mv|tee)\b.*agent-guardrails', cmd, re.IGNORECASE):
+    if re.search(r'\b(cp|mv|tee)\b.*(?:agent-guardrails|gouvernai)', cmd, re.IGNORECASE):
         return True
     return False
 
@@ -160,9 +160,12 @@ def check_dangerous_system_commands(command):
             return True
     return False
 
+PLUGIN_DIR_MARKERS = ["agent-guardrails", "gouvernai"]
+
 def is_guardrails_path(file_path):
-    """Return True if file_path contains 'agent-guardrails'."""
-    return "agent-guardrails" in file_path.replace("\\", "/")
+    """Return True if file_path contains a known guardrails plugin dir marker."""
+    normalized = file_path.replace("\\", "/")
+    return any(marker in normalized for marker in PLUGIN_DIR_MARKERS)
 
 def check_file_write(file_path, content=""):
     """Check file writes for credential exposure in committed content."""
@@ -264,7 +267,7 @@ def main():
         # Block self-modification of guardrails files
         guardrails_files = ["SKILL.md", "ACTIONS.md", "TIERS.md", "POLICY.md", "GUIDE.md"]
         basename = os.path.basename(file_path)
-        if basename in guardrails_files and "agent-guardrails" in file_path:
+        if basename in guardrails_files and is_guardrails_path(file_path):
             block(
                 "Guardrails self-modification blocked",
                 f"Cannot modify guardrails skill file: {basename}. NEVER rule 3."
