@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "mindxo",
   "owner": {
-    "name": "MindXO"
+    "name": "Myr-Aya"
   },
   "description": "AI governance and guardrails plugins by MindXO",
   "plugins": [
