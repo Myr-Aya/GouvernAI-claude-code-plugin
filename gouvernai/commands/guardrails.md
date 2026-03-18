@@ -1,6 +1,6 @@
 ---
 name: guardrails
-description: Show guardrails status, switch modes, or view the audit log. Usage: /guardrails [status|log|strict|relaxed|audit|reset|policy]
+description: "Show guardrails status, switch modes, or view the audit log. Usage: /guardrails [status|log|strict|relaxed|audit|reset|policy]"
 ---
 
 Show the current guardrails status and provide mode controls.
