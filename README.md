@@ -12,6 +12,7 @@ claude plugin marketplace add Myr-Aya/GouvernAI-claude-code-plugin
 
 # Then install the plugin
 claude plugin install gouvernai@mindxo
+```
 
 After install, guardrails activate automatically on the next session. No configuration required.
 
@@ -117,16 +118,16 @@ In February 2026, Check Point Research disclosed CVEs allowing RCE through Claud
 claude plugin marketplace add Myr-Aya/GouvernAI-claude-code-plugin
 
 # User scope (default, recommended)
-/claude plugin install gouvernai@mindxo
+claude plugin install gouvernai@mindxo
 
 # Project scope (only if you trust all contributors)
-/claude plugin install gouvernai@mindxo --scope project
+claude plugin install gouvernai@mindxo --scope project
 ```
 
 ## Limitations
 
 - **Hooks cannot intercept MCP tool calls.** If Claude uses MCP servers to execute actions, the PreToolUse hook does not fire. The skill layer still applies (Claude reads SKILL.md and classifies MCP actions), but there is no deterministic enforcement.
-- **Skill compliance varies by model.** Tested on Claude Sonnet 4.6 (10/10 correct). Smaller models (Haiku) may have lower compliance rates.
+- **Skill compliance varies by model.** Tested informally on Claude Sonnet 4.6 (9/10 correct in Scenario A, 1 known low-risk issue accepted). Smaller models (Haiku) may have lower compliance rates.
 - **Hooks add ~10ms per tool call.** The Python script is lightweight, but it runs on every Bash/Write/Edit call.
 
 ## Threat model and limitations
@@ -156,6 +157,6 @@ This plugin is a risk management tool, not a security boundary. It is designed t
 
 MIT — see [LICENSE](LICENSE)
 
-## Built by MindXO
+## Built by Myr-Aya, MindXO
 
 [mind-xo.com](https://mind-xo.com)
