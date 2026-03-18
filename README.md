@@ -1,8 +1,8 @@
-# 🛡️ GouvernAI — Claude Code Plugin
+# 🛡️ GouvernAI - Claude Code Plugin
 
 Runtime guardrails for AI agents. Classifies every sensitive action by risk tier, enforces proportional controls, blocks dangerous actions with hard constraints, and logs a full audit trail.
 
-**Dual enforcement:** Linguistic skill (probabilistic classification by Claude) + deterministic hooks (hard constraint blocking via PreToolUse scripts). The hooks physically block obfuscated commands, credential transmission, and catastrophic system commands — even if Claude skips the skill.
+**Dual enforcement:** Linguistic skill (probabilistic classification by Claude) + deterministic hooks (hard constraint blocking via PreToolUse scripts). The hooks physically block obfuscated commands, credential transmission, and catastrophic system commands even if Claude skips the skill.
 
 ## Install
 
