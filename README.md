@@ -20,6 +20,12 @@ claude plugin install gouvernai@mindxo
 
 After install, guardrails activate automatically on the next session. No configuration required.
 
+## Usage
+
+**Claude Code Terminal:** Guardrails activate automatically. No action needed.
+
+**Claude Desktop / Cowork:** Run `/gouvernai:guardrails` at the start of your session to activate the gate. The skill may not auto-trigger reliably in these environments.
+
 ## Quick test
 
 Try these after installing to see the guardrails in action:
