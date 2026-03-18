@@ -413,6 +413,118 @@ class TestWindowsPathNormalization(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+class TestBashSelfModFalsePositives(unittest.TestCase):
+    """Ensure Bash commands targeting files with 'gouvernai' in the name (not dir) are allowed."""
+
+    def test_echo_to_gouvernai_notes_file(self):
+        """echo to a file named gouvernai-notes.txt should NOT be blocked."""
+        code, _ = run_hook(bash("echo hi > /home/user/project/gouvernai-notes.txt"))
+        self.assertEqual(code, 0)
+
+    def test_cat_to_gouvernai_prefixed_file(self):
+        """cat to gouvernai-config.yaml should NOT be blocked."""
+        code, _ = run_hook(bash("cat data.json > /home/user/gouvernai-report.yaml"))
+        self.assertEqual(code, 0)
+
+    def test_redirect_to_actual_plugin_dir_still_blocked(self):
+        """Redirect into the actual gouvernai/ plugin dir should still be blocked."""
+        code, out = run_hook(bash("echo 'hacked' > /plugins/gouvernai/skills/gouvernai/POLICY.md"))
+        self.assertEqual(code, 2)
+        self.assertIn("BLOCKED", out["systemMessage"])
+
+    def test_sed_on_actual_plugin_dir_still_blocked(self):
+        """sed -i on a file inside gouvernai/ dir should still be blocked."""
+        code, out = run_hook(bash("sed -i 's/NEVER/ALWAYS/g' /plugins/gouvernai/skills/gouvernai/SKILL.md"))
+        self.assertEqual(code, 2)
+
+
+class TestWindowsScratchPaths(unittest.TestCase):
+    """Ensure scratch/temp exemptions work with Windows-style backslash paths."""
+
+    def test_credential_in_windows_scratch_allowed(self):
+        """Credentials in scratch\\ dir with Windows paths should be allowed."""
+        code, _ = run_hook(write("C:\\repo\\scratch\\notes.txt", "token = 'sk-abcdefghijklmnopqrstuvwxyz123456'"))
+        self.assertEqual(code, 0)
+
+    def test_credential_in_windows_temp_allowed(self):
+        """Credentials in temp\\ dir with Windows paths should be allowed."""
+        code, _ = run_hook(write("C:\\Users\\myria\\temp\\debug.py", "AWS_KEY = 'AKIAIOSFODNN7EXAMPLE'"))
+        self.assertEqual(code, 0)
+
+    def test_credential_in_windows_normal_dir_still_blocked(self):
+        """Credentials in a normal Windows path should still be blocked."""
+        code, out = run_hook(write("C:\\Users\\myria\\project\\config.py", "AWS_KEY = 'AKIAIOSFODNN7EXAMPLE'"))
+        self.assertEqual(code, 2)
+
+
+class TestSelfModificationFalsePositives(unittest.TestCase):
+    """Ensure files with 'gouvernai' in the name but not in a plugin dir are allowed."""
+
+    def test_write_to_gouvernai_notes_file(self):
+        """Writing to a file named gouvernai-notes.txt should NOT be blocked."""
+        code, _ = run_hook(write("/home/user/project/gouvernai-notes.txt", "some notes"))
+        self.assertEqual(code, 0)
+
+    def test_write_to_gouvernai_prefixed_file(self):
+        """Writing to gouvernai-config.yaml outside plugin dir should NOT be blocked."""
+        code, _ = run_hook(write("/home/user/project/gouvernai-config.yaml", "key: value"))
+        self.assertEqual(code, 0)
+
+    def test_edit_file_with_gouvernai_in_name(self):
+        """Editing a file with gouvernai in the filename (not dir) should NOT be blocked."""
+        code, _ = run_hook(edit("/home/user/docs/gouvernai-overview.md", "updated content"))
+        self.assertEqual(code, 0)
+
+    def test_write_to_actual_plugin_skill_still_blocked(self):
+        """Writing to SKILL.md inside the actual plugin dir should still be blocked."""
+        code, out = run_hook(write("/home/user/.claude/plugins/gouvernai/skills/gouvernai/SKILL.md", "hacked"))
+        self.assertEqual(code, 2)
+        self.assertIn("BLOCKED", out["systemMessage"])
+
+
+class TestCatastrophicDeleteScope(unittest.TestCase):
+    """Ensure only truly catastrophic deletes are blocked, not normal ones."""
+
+    def test_rm_rf_root_still_blocked(self):
+        code, out = run_hook(bash("rm -rf /"))
+        self.assertEqual(code, 2)
+
+    def test_rm_rf_home_still_blocked(self):
+        code, out = run_hook(bash("rm -rf ~"))
+        self.assertEqual(code, 2)
+
+    def test_rm_rf_tmp_cache_allowed(self):
+        """Deleting /tmp/cache is a normal operation — should NOT be blocked."""
+        code, _ = run_hook(bash("rm -rf /tmp/cache"))
+        self.assertEqual(code, 0)
+
+    def test_rm_rf_project_dir_allowed(self):
+        """Deleting a project subdirectory should NOT be blocked."""
+        code, _ = run_hook(bash("rm -rf /home/user/project/build"))
+        self.assertEqual(code, 0)
+
+    def test_rm_rf_var_log_allowed(self):
+        """Deleting /var/log/app is a normal operation — should NOT be blocked."""
+        code, _ = run_hook(bash("rm -rf /var/log/myapp"))
+        self.assertEqual(code, 0)
+
+
+class TestLogAutoApproveProjectRoot(unittest.TestCase):
+    """guardrails_log.md should be auto-approved even in the project root (no plugin marker)."""
+
+    def test_write_log_in_project_root(self):
+        """Writes to guardrails_log.md in the project root should be auto-approved."""
+        code, out = run_hook(write("/home/user/project/guardrails_log.md", "| 2026-03-18 | T2 | ... |"))
+        self.assertEqual(code, 0)
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "allow")
+
+    def test_read_log_in_project_root(self):
+        """Reads of guardrails_log.md in the project root should be auto-approved."""
+        code, out = run_hook(read("/home/user/project/guardrails_log.md"))
+        self.assertEqual(code, 0)
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "allow")
+
+
 class TestModeConfigEdgeCases(unittest.TestCase):
     """Edge cases for mode config file handling."""
 
