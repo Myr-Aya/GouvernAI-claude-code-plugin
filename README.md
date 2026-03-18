@@ -1,8 +1,10 @@
-# 🛡️ GouvernAI - Claude Code Plugin
+# 🛡️ GouvernAI — Claude Code Plugin
 
-Runtime guardrails for AI agents. Classifies every sensitive action by risk tier, enforces proportional controls, blocks dangerous actions with hard constraints, and logs a full audit trail.
+Runtime guardrails for AI agents. Classifies every sensitive action by risk tier, enforces proportional controls, and logs a full audit trail.
 
-**Dual enforcement:** Linguistic skill (probabilistic classification by Claude) + deterministic hooks (hard constraint blocking via PreToolUse scripts). The hooks physically block obfuscated commands, credential transmission, and catastrophic system commands even if Claude skips the skill.
+GouvernAI is an **operational safety and governance layer** — designed to catch mistakes, enforce consistent approval workflows, and create accountability through audit logging. It is one layer in a [defense-in-depth](https://internationalaisafetyreport.org/publication/2026-report-extended-summary-policymakers) approach to AI agent risk management, as recommended by the 2026 International AI Safety Report: multiple layers of safeguards compensating for weaknesses in any single control.
+
+**Dual enforcement:** Linguistic skill (probabilistic risk classification by Claude) + deterministic hooks (pattern-based blocking via PreToolUse scripts). The hooks block common obfuscated commands, credential transmission patterns, and catastrophic system commands — even if Claude skips the skill. Some bypass patterns exist (see Threat Model).
 
 ## Install
 
@@ -129,10 +131,19 @@ claude plugin install gouvernai@mindxo --scope project
 - **Hooks cannot intercept MCP tool calls.** If Claude uses MCP servers to execute actions, the PreToolUse hook does not fire. The skill layer still applies (Claude reads SKILL.md and classifies MCP actions), but there is no deterministic enforcement.
 - **Skill compliance varies by model.** Tested informally on Claude Sonnet 4.6 (9/10 correct in Scenario A, 1 known low-risk issue accepted). Smaller models (Haiku) may have lower compliance rates.
 - **Hooks add ~10ms per tool call.** The Python script is lightweight, but it runs on every Bash/Write/Edit call.
+- **Hook patterns target Unix/Bash syntax.** PowerShell equivalents (e.g. `Get-Content`, `Invoke-WebRequest`, `Remove-Item`) are not covered. Claude Code uses Bash on all platforms, so this is low risk for typical usage.
 
 ## Threat model and limitations
 
-This plugin is a risk management tool, not a security boundary. It is designed to catch mistakes, obvious misuse, and common attack patterns. It does not protect against sophisticated, determined adversaries.
+GouvernAI is an operational safety and governance layer, not a security boundary. In the defense-in-depth model described by the [2026 International AI Safety Report](https://internationalaisafetyreport.org/publication/2026-report-extended-summary-policymakers), it sits at the runtime layer — gating agent actions before execution through a combination of linguistic classification and pattern-based blocking.
+
+Its real value is:
+- Catching accidental destructive actions before they happen
+- Forcing a consistent approval and logging workflow across sessions
+- Providing an auditable policy scaffold for teams
+- Reducing variance between "careful" and "careless" agent sessions
+
+It does not protect against sophisticated, determined adversaries. Regex-plus-prompt guardrails are effective at stopping mistakes, not targeted attacks.
 
 **What it catches:**
 - Single-command credential exfiltration (cat .env | curl)
@@ -151,7 +162,14 @@ This plugin is a risk management tool, not a security boundary. It is designed t
 - Novel obfuscation techniques not covered by current regex patterns
 - Prompt injection that convinces the model to ignore the skill layer
 
-**Defense in depth:** For production or high-security environments, complement this plugin with infrastructure-level controls: network egress policies, secret vaults (never expose raw credential values to the agent), sandboxed execution environments, and DLP (data loss prevention) monitoring.
+**Defense in depth:** GouvernAI is one layer in a multi-layer safety stack. For production or high-security environments, complement it with:
+- **Network egress policies** — restrict which external endpoints the agent can reach
+- **Secret vaults** — never expose raw credential values to the agent; use short-lived tokens
+- **Sandboxed execution** — run agent actions in isolated environments with limited blast radius
+- **DLP monitoring** — detect and alert on sensitive data leaving the environment
+- **Audit and incident response** — GouvernAI's log provides the audit trail; pair it with alerting and review processes
+
+No single layer is sufficient. The 2026 International AI Safety Report's Swiss cheese model applies: each layer has holes, but layered together they provide meaningful protection.
 
 ## License
 
