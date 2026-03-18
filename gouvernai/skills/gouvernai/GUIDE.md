@@ -24,6 +24,8 @@ Log.
 
 Do NOT split classification and presentation into separate messages. Do NOT narrate the gate steps ("Step 1, I will identify... Step 2, I will classify..."). Run the steps internally, then present the result in the format above.
 
+**After logging:** Do NOT read back or display the log entry after writing it. The log write is silent — just proceed with the action or halt. Only display log entries when the user explicitly requests `/gouvernai:guardrails log`.
+
 ## Self-improvement
 
 When you encounter any of the following, append a note to `guardrails_log.md` with a "SUGGESTION" tag:
