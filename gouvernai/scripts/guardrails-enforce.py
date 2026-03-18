@@ -130,7 +130,8 @@ def check_bash_self_modification(command):
     """NEVER rule 3: Never self-modify guardrails files via Bash."""
     # Normalize backslashes so Windows paths match too
     cmd = command.replace("\\", "/")
-    if not any(marker in cmd for marker in PLUGIN_DIR_MARKERS):
+    # Only match if marker appears as a directory component, not as a substring of a filename
+    if not any(re.search(r'(?:^|/)' + marker + r'(?:/|$)', cmd) for marker in PLUGIN_DIR_MARKERS):
         return False
     # Redirect writes: > or >> targeting a guardrails path
     if re.search(r'>{1,2}\s*\S*(?:agent-guardrails|gouvernai)', cmd):
@@ -146,8 +147,8 @@ def check_bash_self_modification(command):
 def check_dangerous_system_commands(command):
     """Additional safety: block rm -rf / and similar catastrophic commands."""
     catastrophic = [
-        r'rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)?(-[a-zA-Z]*r[a-zA-Z]*\s+)?/',
-        r'rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+)?(-[a-zA-Z]*f[a-zA-Z]*\s+)?/',
+        r'rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+)*(-[a-zA-Z]*f[a-zA-Z]*\s+)*/$',
+        r'rm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+)*(-[a-zA-Z]*r[a-zA-Z]*\s+)*/$',
         r'rm\s+-rf\s+~/?$',
         r'rm\s+-rf\s+\$HOME/?$',
         r'mkfs\.',
@@ -163,9 +164,10 @@ def check_dangerous_system_commands(command):
 PLUGIN_DIR_MARKERS = ["agent-guardrails", "gouvernai"]
 
 def is_guardrails_path(file_path):
-    """Return True if file_path contains a known guardrails plugin dir marker."""
+    """Return True if file_path contains a known guardrails plugin directory component."""
     normalized = file_path.replace("\\", "/")
-    return any(marker in normalized for marker in PLUGIN_DIR_MARKERS)
+    parts = normalized.split("/")
+    return any(marker in parts for marker in PLUGIN_DIR_MARKERS)
 
 def check_file_write(file_path, content=""):
     """Check file writes for credential exposure in committed content."""
@@ -182,8 +184,9 @@ def check_file_write(file_path, content=""):
                 # Only block if writing to files that are likely committed
                 skip_dirs = ['scratch/', 'temp/', 'tmp/']
                 skip_files = ['.env']
+                normalized_path = file_path.replace("\\", "/")
                 basename = os.path.basename(file_path)
-                if basename not in skip_files and not any(d in file_path for d in skip_dirs):
+                if basename not in skip_files and not any(d in normalized_path for d in skip_dirs):
                     return True
     return False
 
@@ -211,7 +214,11 @@ def main():
     if tool_name == "Read":
         file_path = tool_input.get("file_path", tool_input.get("path", ""))
         basename = os.path.basename(file_path)
-        skill_files = {"SKILL.md", "ACTIONS.md", "TIERS.md", "POLICY.md", "GUIDE.md", "guardrails_log.md", "README.md"}
+        # Log file can be anywhere (project root) — always safe to read
+        if basename == "guardrails_log.md":
+            print(json.dumps(auto_approve_output))
+            sys.exit(0)
+        skill_files = {"SKILL.md", "ACTIONS.md", "TIERS.md", "POLICY.md", "GUIDE.md", "README.md"}
         if basename in skill_files and is_guardrails_path(file_path):
             print(json.dumps(auto_approve_output))
             sys.exit(0)
@@ -257,7 +264,7 @@ def main():
 
         # Auto-approve writes to guardrails_log.md and guardrails-mode.json
         basename = os.path.basename(file_path)
-        if basename == "guardrails_log.md" and is_guardrails_path(file_path):
+        if basename == "guardrails_log.md":
             print(json.dumps(auto_approve_output))
             sys.exit(0)
         if basename == "guardrails-mode.json":
