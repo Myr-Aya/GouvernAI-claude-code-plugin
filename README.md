@@ -24,7 +24,7 @@ After install, guardrails activate automatically on the next session. No configu
 
 **Claude Code Terminal:** Guardrails activate automatically. No action needed.
 
-**Claude Desktop / Cowork:** Run `/gouvernai:guardrails` at the start of your session to activate the gate. The skill may not auto-trigger reliably in these environments.
+**Claude Code Desktop:** Run `/gouvernai:guardrails` at the start of your session to activate the gate. The skill may not auto-trigger reliably in these environments.
 
 ## Quick test
 
