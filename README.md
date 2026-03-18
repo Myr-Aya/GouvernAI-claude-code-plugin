@@ -113,11 +113,14 @@ Runtime files written to the project root during use:
 In February 2026, Check Point Research disclosed CVEs allowing RCE through Claude Code hooks in untrusted repos. This plugin should be installed at user scope (default), not project scope, unless you trust all contributors to the project.
 
 ```bash
+# Add the marketplace first
+claude plugin marketplace add Myr-Aya/GouvernAI-claude-code-plugin
+
 # User scope (default, recommended)
-/plugin install gouvernai@gouvernai
+/claude plugin install gouvernai@mindxo
 
 # Project scope (only if you trust all contributors)
-/plugin install gouvernai@gouvernai --scope project
+/claude plugin install gouvernai@mindxo --scope project
 ```
 
 ## Limitations
