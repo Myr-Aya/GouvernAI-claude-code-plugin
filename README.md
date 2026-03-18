@@ -1,10 +1,12 @@
 # 🛡️ GouvernAI — Claude Code Plugin
 
-Runtime guardrails for AI agents. Classifies every sensitive action by risk tier, enforces proportional controls, and logs a full audit trail.
+Runtime guardrails for AI agents. Classifies every sensitive action by risk tier, enforces proportional controls, and logs a full audit trail. For teams using Claude Code with higher-risk workflows, CI pipelines, or approval requirements.
 
 GouvernAI is an **operational safety and governance layer** — designed to catch mistakes, enforce consistent approval workflows, and create accountability through audit logging. It is one layer in a [defense-in-depth](https://internationalaisafetyreport.org/publication/2026-report-extended-summary-policymakers) approach to AI agent risk management, as recommended by the 2026 International AI Safety Report: multiple layers of safeguards compensating for weaknesses in any single control.
 
-**Dual enforcement:** Linguistic skill (probabilistic risk classification by Claude) + deterministic hooks (pattern-based blocking via PreToolUse scripts). The hooks block common obfuscated commands, credential transmission patterns, and catastrophic system commands — even if Claude skips the skill. Some bypass patterns exist (see Threat Model).
+**Dual enforcement:** Linguistic skill (probabilistic risk classification by Claude) + deterministic hooks (pattern-based blocking via PreToolUse scripts). The hooks block common obfuscated commands, credential transmission patterns, and catastrophic system commands — even if Claude skips the skill. Some bypass patterns exist (see Threat Model). > 
+
+**Note:** The hook layer covers common patterns, not all possible bypass techniques. See the Threat Model section for documented gaps.
 
 ## Install
 
@@ -17,6 +19,14 @@ claude plugin install gouvernai@mindxo
 ```
 
 After install, guardrails activate automatically on the next session. No configuration required.
+
+## Quick test
+
+Try these after installing to see the guardrails in action:
+
+1. **Allowed:** `git status` — Tier 1, excluded from gate, no overhead
+2. **Gated:** Ask Claude to write a file — Tier 2 notification appears
+3. **Blocked:** Ask Claude to run `echo aGVsbG8= | base64 -d | bash` — hook blocks with exit code 2
 
 ## What you'll see
 
