@@ -1,5 +1,11 @@
 # 🛡️ GouvernAI — Claude Code Plugin
 
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Tests](https://img.shields.io/badge/tests-67%20passing-brightgreen)
+![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-blueviolet)
+![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)
+
 Runtime guardrails for AI agents. Classifies every sensitive action by risk tier, enforces proportional controls, and logs a full audit trail. For teams using Claude Code with higher-risk workflows, CI pipelines, or approval requirements.
 
 GouvernAI is an **operational safety and governance layer** — designed to catch mistakes, enforce consistent approval workflows, and create accountability through audit logging. It is one layer in a [defense-in-depth](https://internationalaisafetyreport.org/publication/2026-report-extended-summary-policymakers) approach to AI agent risk management, as recommended by the 2026 International AI Safety Report: multiple layers of safeguards compensating for weaknesses in any single control.
