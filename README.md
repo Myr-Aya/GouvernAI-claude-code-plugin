@@ -242,6 +242,4 @@ No single layer is sufficient. The 2026 International AI Safety Report's Swiss c
 
 MIT — see [LICENSE](LICENSE)
 
-## Built by Myr-Aya, MindXO
-
-[mind-xo.com](https://mind-xo.com)
+## Built by Myr-Aya
