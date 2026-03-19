@@ -42,6 +42,57 @@ Try these after installing to see the guardrails in action:
 - **Tier 4** (sudo, credential transmit, purchases) — 🛡️ full stop with risk assessment
 - **BLOCKED** (obfuscated commands, credential exfiltration) — hard block, no override
 
+## Screenshots
+
+### `/guardrails` — Session status
+![Session status](assets/screenshots/guardrails-status.png)
+
+### Tier 2 — Notify and proceed
+File write in the workspace. GouvernAI notifies and proceeds unless you object.
+
+![T2 notification](assets/screenshots/t2-notify.png)
+
+### Tier 3 — Pause for approval
+Package installation requires explicit approval before executing.
+
+![T3 npm install](assets/screenshots/t3-npm-install.png)
+
+### Tier 4 — Full stop (bulk delete with escalation)
+Bulk file deletion: base tier T3 escalated to T4 for 9 targets. Lists every file and asks for confirmation.
+
+![T4 bulk delete](assets/screenshots/t4-bulk-delete.png)
+
+### Tier 4 — Full stop (email with escalation)
+Outbound email to unfamiliar recipient: base tier T3 escalated to T4. Shows the escalation chain.
+
+![T4 email halt](assets/screenshots/t4-email-halt.png)
+
+### BLOCKED — Obfuscated command (hard constraint)
+Base64-to-bash pipe detected and blocked. No override possible.
+
+![Blocked obfuscated](assets/screenshots/blocked-obfuscated.png)
+
+### BLOCKED — Self-modification attempt (hard constraint)
+Attempt to edit SKILL.md to remove the gate. Blocked with explanation and alternatives.
+
+![Blocked self-modification](assets/screenshots/blocked-self-modification.png)
+
+### BLOCKED — Credential hardcoded in file
+API key detected in file write. Shows the key, explains the risk, suggests alternatives.
+
+![Blocked credential](assets/screenshots/blocked-credential-in-file.png)
+
+### Relaxed mode — T2 skips the gate
+In relaxed mode, T2 actions proceed with no gate. T3 and T4 still require approval.
+
+![Relaxed mode](assets/screenshots/mode-relaxed.png)
+![T2 relaxed skip](assets/screenshots/t2-relaxed-skip.png)
+
+### Audit log
+Full session audit trail showing every gated action with tier, outcome, and escalation reason.
+
+![Audit log](assets/screenshots/audit-log.png)
+
 ## Slash commands
 
 | Command | What it does |
