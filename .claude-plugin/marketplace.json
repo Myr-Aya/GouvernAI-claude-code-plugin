@@ -9,7 +9,7 @@
     {
       "name": "gouvernai",
       "description": "Runtime guardrails for Claude Code. Classifies actions by risk tier, enforces proportional controls, blocks dangerous operations, and logs audit trails.",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "source": "./gouvernai",
       "tags": ["security", "guardrails", "governance"],
       "category": "security"
