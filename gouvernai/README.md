@@ -1,7 +1,7 @@
 # 🛡️ GouvernAI — Claude Code Plugin
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
-![Tests](https://img.shields.io/badge/tests-67%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-85%20passing-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-blueviolet)
 ![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)
