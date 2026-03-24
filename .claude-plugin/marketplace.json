@@ -4,14 +4,26 @@
   "owner": {
     "name": "Myr-Aya"
   },
-  "description": "AI governance and guardrails plugins by MindXO",
+  "description": "AI governance and guardrails by MindXO — runtime risk classification, proportional controls, and audit logging for AI agents",
   "plugins": [
     {
       "name": "gouvernai",
-      "description": "Runtime guardrails for Claude Code. Classifies actions by risk tier, enforces proportional controls, blocks dangerous operations, and logs audit trails.",
+      "description": "Runtime guardrails for Claude Code with dual enforcement. Linguistic skill (risk classification, approval gates) + deterministic hooks (hard blocking of obfuscated commands, credential exfiltration, catastrophic operations). 67 unit tests.",
       "version": "0.1.0",
       "source": "./gouvernai",
-      "tags": ["security", "guardrails", "governance"],
+      "tags": ["security", "guardrails", "governance", "hooks", "dual-enforcement"],
+      "category": "security"
+    },
+    {
+      "name": "gouvernai-skill",
+      "description": "Runtime guardrails skill for Claude Code. Classifies every sensitive action by risk tier, enforces proportional controls (notify / approve / halt), and logs a full audit trail. Pure linguistic enforcement — zero dependencies, no hooks. Works everywhere Claude Code runs.",
+      "version": "0.1.0",
+      "source": {
+        "source": "github",
+        "repo": "Myr-Aya/GouvernAI-skill",
+        "path": "gouvernai-skill"
+      },
+      "tags": ["security", "guardrails", "governance", "skill-only"],
       "category": "security"
     }
   ]
