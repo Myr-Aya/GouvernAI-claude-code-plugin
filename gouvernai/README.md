@@ -248,4 +248,6 @@ No single layer is sufficient. The 2026 International AI Safety Report's Swiss c
 
 MIT — see [LICENSE](LICENSE)
 
+**Website:** [gouvernai.ai](https://gouvernai.ai)
+
 ## Built by Myr-Aya
