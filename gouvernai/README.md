@@ -244,6 +244,10 @@ It does not protect against sophisticated, determined adversaries. Regex-plus-pr
 
 No single layer is sufficient. The 2026 International AI Safety Report's Swiss cheese model applies: each layer has holes, but layered together they provide meaningful protection.
 
+## Uninstallation
+
+To uninstall: `claude plugin uninstall gouvernai@mindxo` or go to Browse plugins → Personal → select the plugin → Uninstall.
+
 ## License
 
 MIT — see [LICENSE](LICENSE)
