@@ -6,13 +6,11 @@
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-blueviolet)
 ![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)
 
-Runtime guardrails for AI agents. Classifies every sensitive action by risk tier, enforces proportional controls, and logs a full audit trail. For teams using Claude Code with higher-risk workflows, CI pipelines, or approval requirements.
+> Permissive where risk is low. Conservative where it matters. Invisible everywhere else.
 
-GouvernAI is an **operational safety and governance layer** — designed to catch mistakes, enforce consistent approval workflows, and create accountability through audit logging. It is one layer in a [defense-in-depth](https://internationalaisafetyreport.org/publication/2026-report-extended-summary-policymakers) approach to AI agent risk management, as recommended by the 2026 International AI Safety Report: multiple layers of safeguards compensating for weaknesses in any single control.
+Runtime guardrails that preserve your flow state — reads, drafts, and routine writes flow through with zero friction. Guardrails only activate when actions carry real risk: credential transmission, bulk deletions, unfamiliar endpoints, scope expansion.
 
-**Dual enforcement:** Linguistic skill (probabilistic risk classification by Claude) + deterministic hooks (pattern-based blocking via PreToolUse scripts). The hooks block common obfuscated commands, credential transmission patterns, and catastrophic system commands — even if Claude skips the skill. Some bypass patterns exist (see Threat Model). > 
-
-**Note:** The hook layer covers common patterns, not all possible bypass techniques. See the Threat Model section for documented gaps.
+Dual enforcement: Skill layer (proportional risk classification by Claude) + deterministic hooks (hard constraint blocking via PreToolUse scripts). The hooks physically block obfuscated commands, credential transmission, and catastrophic system commands — even if Claude skips the skill. Some bypass patterns exist (see Threat Model). > 
 
 ## Install
 
@@ -23,9 +21,6 @@ claude plugin marketplace add Myr-Aya/GouvernAI-claude-code-plugin
 # Then install the plugin
 claude plugin install gouvernai@mindxo
 ```
-
-After install, guardrails activate automatically on the next session. No configuration required.
-
 ## Usage
 
 **Claude Code Terminal:** Guardrails activate automatically. No action needed.
@@ -42,11 +37,15 @@ Try these after installing to see the guardrails in action:
 
 ## What you'll see
 
-- **Tier 1** (reads, drafts, known URLs) — invisible, zero overhead
-- **Tier 2** (file writes, git commit) — 🛡️ notification, proceeds automatically
-- **Tier 3** (email, config changes, npm install, curl) — 🛡️ pauses for your approval
-- **Tier 4** (sudo, credential transmit, purchases) — 🛡️ full stop with risk assessment
-- **BLOCKED** (obfuscated commands, credential exfiltration) — hard block, no override
+Most of the time, you won't notice GouvernAI is running. ~60% of typical agent actions are reads, drafts, and navigation — all excluded from the gate. Zero overhead, zero prompts, zero friction. When risk is real, GouvernAI steps in proportionally:
+
+| Risk | Actions | Your experience |
+|------|---------|-----------------|
+| **T1** | reads, drafts, git status | Invisible. Flow state preserved. |
+| **T2** | file writes, git commit | Brief notification, keeps going. |
+| **T3** | npm install, curl, email, config | Pauses for approval — only when consequences are real. |
+| **T4** | sudo, credential transmit, bulk delete | Full stop with risk assessment — because it should. |
+| **BLOCKED** | obfuscated commands, credential exfil | Hard block. No override. Even if Claude skips the skill. |
 
 ## Screenshots
 
@@ -98,6 +97,18 @@ In relaxed mode, T2 actions proceed with no gate. T3 and T4 still require approv
 Full session audit trail showing every gated action with tier, outcome, and escalation reason.
 
 ![Audit log](assets/screenshots/audit-log.png)
+
+## Complements Claude Code's auto mode
+
+PreToolUse hooks run *before* the auto mode classifier — GouvernAI acts as a first pass. What it adds on top:
+
+| Auto mode | GouvernAI |
+|-----------|-----------|
+| Binary allow/block | 4-tier proportional controls |
+| Opaque classifier | Transparent, editable policy files you own |
+| No audit trail | Append-only log with tier, escalation, outcome |
+| No configurable modes | strict / relaxed / audit-only, persistent across sessions |
+| No escalation rules | Unfamiliar targets, bulk ops, scope expansion, chained actions |
 
 ## Slash commands
 
