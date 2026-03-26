@@ -1,4 +1,18 @@
-# 🛡️ GouvernAI — Claude Code Plugin
+<p align="center">
+  <img src="assets/gouvernai-icon-512.svg" alt="GouvernAI" width="120">
+</p>
+<h1 align="center">GouvernAI — Claude Code Plugin</h1>
+<p align="center">
+  <em>gouvernail (n.) — French for helm, rudder. To steer, not to stop.</em>
+</p>
+<p align="center">
+  <a href="#install">Install</a> •
+  <a href="#what-youll-see">What you'll see</a> •
+  <a href="#how-it-works">How it works</a> •
+  <a href="#complements-claude-codes-auto-mode">vs Auto mode</a> •
+  <a href="#threat-model-and-limitations">Threat model</a>
+</p>
+
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Tests](https://img.shields.io/badge/tests-85%20passing-brightgreen)
