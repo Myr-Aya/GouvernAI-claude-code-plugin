@@ -88,8 +88,12 @@ def check_credential_exposure(command):
         r'cat\s+.*\.pem',
         r'cat\s+.*id_rsa',
         r'cat\s+.*\.ssh/',
+        r'cat\s+.*\.key',
+        r'cat\s+.*\.secret',
+        r'cat\s+.*credentials',
         r'echo\s+\$\w*(KEY|TOKEN|SECRET|PASSWORD|PASS|CRED)',
         r'printenv\s+\w*(KEY|TOKEN|SECRET|PASSWORD)',
+        r'grep\s+.*(TOKEN|SECRET|KEY|PASSWORD|PASS)\b',
     ]
     transmit_patterns = [
         r'\|\s*curl',
@@ -99,6 +103,9 @@ def check_credential_exposure(command):
         r'>\s*/dev/tcp/',
         r'\|\s*mail\b',
         r'\|\s*sendmail',
+        r'\|\s*python[23]?\s+.*requests\.',
+        r'\|\s*python[23]?\s+.*http\.client',
+        r'\|\s*node\s+.*fetch\(',
     ]
     has_secret = any(re.search(p, command, re.IGNORECASE) for p in secret_patterns)
     has_transmit = any(re.search(p, command, re.IGNORECASE) for p in transmit_patterns)
@@ -124,6 +131,21 @@ def check_credential_exposure(command):
     for pattern in var_staging_patterns:
         if re.search(pattern, command, re.IGNORECASE):
             return True
+    # Direct command substitution: curl/wget with $(cat .env) or similar secret-source commands
+    direct_subst_patterns = [
+        r'\b(curl|wget|nc|netcat)\b.*\$\(.*\b(cat|grep|printenv)\b.*\.(env|pem|key|ssh|secret)',
+        r'\b(curl|wget|nc|netcat)\b.*\$\(.*\b(cat|grep|printenv)\b.*(credentials|id_rsa)',
+    ]
+    for pattern in direct_subst_patterns:
+        if re.search(pattern, command, re.IGNORECASE):
+            return True
+    # Generic variable staging: any variable assigned from a secret file, then network transmission
+    generic_staging_patterns = [
+        r'\w+=\$\(.*\b(cat|grep)\b.*\.(env|pem|key|ssh|secret)\b.*\).*\b(curl|wget|nc|netcat)\b',
+    ]
+    for pattern in generic_staging_patterns:
+        if re.search(pattern, command, re.IGNORECASE):
+            return True
     return False
 
 def check_bash_self_modification(command):
@@ -142,6 +164,16 @@ def check_bash_self_modification(command):
     # cp / mv / tee writing into a guardrails path
     if re.search(r'\b(cp|mv|tee)\b.*(?:agent-guardrails|gouvernai)', cmd, re.IGNORECASE):
         return True
+    # Interpreter-based file writes targeting guardrails paths
+    interpreter_write_patterns = [
+        r'python[23]?\s+-c\s+.*(?:open|write|Path).*(?:agent-guardrails|gouvernai)',
+        r'node\s+-e\s+.*(?:fs\.|writeFile).*(?:agent-guardrails|gouvernai)',
+        r'ruby\s+-e\s+.*(?:File\.|IO\.).*(?:agent-guardrails|gouvernai)',
+        r'perl\s+-e\s+.*(?:open|write).*(?:agent-guardrails|gouvernai)',
+    ]
+    for pattern in interpreter_write_patterns:
+        if re.search(pattern, cmd, re.IGNORECASE):
+            return True
     return False
 
 def check_dangerous_system_commands(command):
@@ -190,14 +222,53 @@ def check_file_write(file_path, content=""):
                     return True
     return False
 
+def get_token_cap():
+    """Read token cap from guardrails-mode.json. Returns None if not set."""
+    try:
+        project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+        config_path = os.path.join(project_dir, "guardrails-mode.json")
+        with open(config_path, "r") as f:
+            config = json.load(f)
+        cap = config.get("token_cap")
+        if cap is not None:
+            return int(cap)
+    except (FileNotFoundError, json.JSONDecodeError, ValueError, TypeError):
+        pass
+    return None
+
+def estimate_tokens(text):
+    """Rough token estimate: ~4 chars per token for English text/code."""
+    if not text:
+        return 0
+    return len(text) // 4
+
+def check_token_cap(tool_name, tool_input):
+    """Check if action payload exceeds the token cap. Returns (exceeds, estimated, cap) or (False, 0, 0)."""
+    cap = get_token_cap()
+    if cap is None:
+        return False, 0, 0
+    estimated = 0
+    if tool_name == "Bash":
+        command = tool_input.get("command", "")
+        estimated = estimate_tokens(command)
+    elif tool_name in ("Write", "Edit"):
+        content = tool_input.get("content", tool_input.get("new_str", ""))
+        estimated = estimate_tokens(content)
+    return estimated > cap, estimated, cap
+
 def main():
     try:
         # Use binary-mode read to avoid Git Bash on Windows mangling stdin
         # when the JSON payload contains shell metacharacters (|, &, ;, etc.)
         raw = sys.stdin.buffer.read().decode("utf-8", errors="replace")
+        if not raw.strip():
+            sys.exit(0)  # Empty stdin — legitimate no-input case
         data = json.loads(raw)
     except (json.JSONDecodeError, Exception):
-        sys.exit(0)  # can't parse input, allow through
+        block(
+            "Hook input parse failure",
+            "Could not parse tool input JSON. Failing closed for safety."
+        )
 
     tool_name = data.get("tool_name", "")
     tool_input = data.get("tool_input", {})
@@ -257,6 +328,18 @@ def main():
                 f"Bash command writes to guardrails path. NEVER rule 3."
             )
 
+        # Token cap (must be last — hard constraints take priority)
+        exceeds, estimated, cap = check_token_cap(tool_name, tool_input)
+        if exceeds:
+            output = {
+                "hookSpecificOutput": {
+                    "permissionDecision": "ask_user"
+                },
+                "systemMessage": f"🛡️ TOKEN CAP — Estimated {estimated:,} tokens (cap: {cap:,}). This action requires approval."
+            }
+            print(json.dumps(output))
+            sys.exit(0)
+
     # ── Write/Edit tool checks ──
     elif tool_name in ("Write", "Edit"):
         file_path = tool_input.get("file_path", tool_input.get("path", ""))
@@ -271,8 +354,11 @@ def main():
             print(json.dumps(auto_approve_output))
             sys.exit(0)
 
-        # Block self-modification of guardrails files
-        guardrails_files = ["SKILL.md", "ACTIONS.md", "TIERS.md", "POLICY.md", "GUIDE.md"]
+        # Block self-modification of guardrails enforcement surface
+        guardrails_files = [
+            "SKILL.md", "ACTIONS.md", "TIERS.md", "POLICY.md", "GUIDE.md",
+            "guardrails-enforce.py", "hooks.json", "plugin.json", "guardrails.md",
+        ]
         basename = os.path.basename(file_path)
         if basename in guardrails_files and is_guardrails_path(file_path):
             block(
@@ -285,6 +371,18 @@ def main():
                 "Credential in file write detected",
                 f"Content appears to contain secrets/credentials being written to {file_path}."
             )
+
+        # Token cap (must be last — hard constraints take priority)
+        exceeds, estimated, cap = check_token_cap(tool_name, tool_input)
+        if exceeds:
+            output = {
+                "hookSpecificOutput": {
+                    "permissionDecision": "ask_user"
+                },
+                "systemMessage": f"🛡️ TOKEN CAP — Estimated {estimated:,} tokens (cap: {cap:,}). This action requires approval."
+            }
+            print(json.dumps(output))
+            sys.exit(0)
 
     # No violation detected
     sys.exit(0)
