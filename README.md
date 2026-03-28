@@ -14,17 +14,18 @@
 </p>
 
 
+
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
-![Tests](https://img.shields.io/badge/tests-85%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-120%2B%20passing-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-plugin-blueviolet)
 ![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)
 
-> Permissive where risk is low. Conservative where it matters. Invisible everywhere else.
+> Auto-approve what's safe. Gate what's risky. Block what's dangerous.
 
-Runtime guardrails that preserve your flow state — reads, drafts, and routine writes flow through with zero friction. Guardrails only activate when actions carry real risk: credential transmission, bulk deletions, unfamiliar endpoints, scope expansion.
+Achieve flow state safely — ~60% of agent actions are auto-approved with zero friction. File writes auto-approve with a brief notification. Guardrails only gate actions when risk is real: network calls, config changes, credential access, bulk operations.
 
-Dual enforcement: Skill layer (proportional risk classification by Claude) + deterministic hooks (hard constraint blocking via PreToolUse scripts). The hooks physically block obfuscated commands, credential transmission, and catastrophic system commands — even if Claude skips the skill. Some bypass patterns exist (see Threat Model). > 
+Dual enforcement: Skill layer (proportional risk classification by Claude) + deterministic hooks (hard constraint blocking via PreToolUse). The hooks block obfuscated commands, credential exfiltration patterns, and catastrophic system commands — even if Claude skips the skill.
 
 ## Install
 
@@ -37,7 +38,13 @@ claude plugin install gouvernai@mindxo
 ```
 ## Usage
 
-**Claude Code Terminal:** Guardrails activate automatically. No action needed.
+**Claude Code Terminal:** Guardrails activate automatically on install. No configuration needed. GouvernAI works alongside Claude Code's native permission prompts — adding tier classification, escalation rules, and audit logging on top.
+
+**With `--dangerously-skip-permissions`:** If you already use Claude Code with native prompts disabled, GouvernAI adds back proportional safety — auto-approving routine work, gating risky actions, and hard-blocking dangerous patterns. This is where GouvernAI adds the most value.
+
+```bash
+claude --dangerously-skip-permissions --plugin-dir /path/to/gouvernai
+```
 
 **Claude Code Desktop:** Run `/gouvernai:guardrails` at the start of your session to activate the gate. The skill may not auto-trigger reliably in these environments.
 
@@ -45,20 +52,20 @@ claude plugin install gouvernai@mindxo
 
 Try these after installing to see the guardrails in action:
 
-1. **Allowed:** `git status` — Tier 1, excluded from gate, no overhead
-2. **Gated:** Ask Claude to write a file — Tier 2 notification appears
+1. **Auto-approved:** `git status` — Tier 1, auto-approved, zero overhead
+2. **Auto-approved with notice:** Ask Claude to write a file — Tier 2, brief notification, keeps going
 3. **Blocked:** Ask Claude to run `echo aGVsbG8= | base64 -d | bash` — hook blocks with exit code 2
 
 ## What you'll see
 
-Most of the time, you won't notice GouvernAI is running. ~60% of typical agent actions are reads, drafts, and navigation — all excluded from the gate. Zero overhead, zero prompts, zero friction. When risk is real, GouvernAI steps in proportionally:
+Most of the time, GouvernAI auto-approves and stays invisible. ~60% of typical agent actions are reads, drafts, and navigation — auto-approved with zero overhead. When risk is real, it steps in proportionally:
 
-| Risk | Actions | Your experience |
-|------|---------|-----------------|
-| **T1** | reads, drafts, git status | Invisible. Flow state preserved. |
-| **T2** | file writes, git commit | Brief notification, keeps going. |
-| **T3** | npm install, curl, email, config | Pauses for approval — only when consequences are real. |
-| **T4** | sudo, credential transmit, bulk delete | Full stop with risk assessment — because it should. |
+| Risk | Actions | What happens |
+|------|---------|--------------|
+| **T1** | reads, drafts, git status | Auto-approved. Zero overhead, zero friction. |
+| **T2** | file writes, git commit | Auto-approved with brief notification. Keeps going unless you object. |
+| **T3** | npm install, curl, email, config | Requires approval — pauses only when consequences are real. |
+| **T4** | sudo, credential transmit, bulk delete | Requires approval after risk assessment — because it should. |
 | **BLOCKED** | obfuscated commands, credential exfil | Hard block. No override. Even if Claude skips the skill. |
 
 ## Screenshots
@@ -112,17 +119,24 @@ Full session audit trail showing every gated action with tier, outcome, and esca
 
 ![Audit log](assets/screenshots/audit-log.png)
 
-## Complements Claude Code's auto mode
+## The middle ground
 
-PreToolUse hooks run *before* the auto mode classifier — GouvernAI acts as a first pass. What it adds on top:
+Claude Code ships with two extremes: the default permission prompts that ask on every action, or `--dangerously-skip-permissions` that removes all prompts entirely. GouvernAI fills the gap between the two.
 
-| Auto mode | GouvernAI |
-|-----------|-----------|
-| Binary allow/block | 4-tier proportional controls |
-| Opaque classifier | Transparent, editable policy files you own |
-| No audit trail | Append-only log with tier, escalation, outcome |
-| No configurable modes | strict / relaxed / audit-only, persistent across sessions |
-| No escalation rules | Unfamiliar targets, bulk ops, scope expansion, chained actions |
+**With default prompts:** GouvernAI works alongside them — adding tier classification, escalation rules, and an audit trail on top of the native permission system.
+
+**With `--dangerously-skip-permissions`:** If you've chosen to disable native prompts for speed, GouvernAI adds back a proportional safety layer. Routine work stays fast, risky actions pause for approval, and dangerous patterns are hard-blocked by hooks regardless.
+
+| | Default prompts | `--dangerously-skip-permissions` alone | + GouvernAI |
+|---|---|---|---|
+| **Routine actions** | Prompted every time | No safety net | Auto-approved silently |
+| **Risky actions** | Same prompt as routine | No safety net | Pauses for approval (T3) |
+| **Dangerous actions** | Same prompt as routine | No safety net | Hard-blocked by hooks |
+| **Audit trail** | None | None | Full log with tier, outcome, escalation |
+| **Configurable** | No | No | strict / relaxed / audit-only / token cap |
+| **Escalation rules** | No | No | Bulk ops, unfamiliar targets, scope expansion |
+
+GouvernAI works with either setup. It adds the most value when native prompts are off — but it never requires you to disable them.
 
 ## Slash commands
 
@@ -135,18 +149,47 @@ PreToolUse hooks run *before* the auto mode classifier — GouvernAI acts as a f
 | `/guardrails audit` | Audit-only mode: T2/T3 auto-proceed, T4 halts (for CI/unattended) |
 | `/guardrails reset` | Return to default full-gate mode |
 | `/guardrails policy` | Display hard constraints |
+| `/guardrails tokencap <n>` | Set token cap — actions exceeding `<n>` tokens pause for approval |
+| `/guardrails tokencap off` | Disable token cap |
 
 Mode changes are written to `guardrails-mode.json` in the project root and **persist across sessions and context resets**. Previously, mode was held only in the model's context window and was silently lost on reset.
 
 ## CI and unattended use
 
-In full-gate mode, Tier 2 actions use "proceed unless objected" — which is silent auto-approval when no human is watching. For scheduled tasks, CI pipelines, or any unattended run, set audit-only mode first:
+In full-gate mode, Tier 2 actions are auto-approved with notification — which becomes silent auto-approval when no human is watching. For scheduled tasks, CI pipelines, or any unattended run, set audit-only mode first:
 
 ```bash
 /guardrails audit
 ```
 
 In audit-only mode: T2 and T3 auto-proceed with full logging, T4 halts without executing. Hard constraints still block regardless of mode.
+
+## Token cap (cost governance)
+
+Set a per-action token threshold. When an action's payload exceeds the cap, GouvernAI pauses for approval — same as a Tier 3 gate.
+
+```bash
+/guardrails tokencap 50000    # Set cap to 50K tokens
+/guardrails tokencap off      # Disable
+/guardrails tokencap          # Show current setting
+```
+
+The token cap is off by default. When enabled:
+- **Hook layer** checks actual payload size (Write/Edit content, Bash command length) deterministically
+- **Skill layer** estimates total cost of multi-step plans before executing
+- Both use T3 controls: pause and require explicit approval
+- Hard constraints still take priority — a dangerous action is blocked regardless of size
+- Guardrails internal files (audit log, mode config) are exempt
+
+## Which mode should I use?
+
+| Use case | Recommended mode | Why |
+|----------|-----------------|-----|
+| Solo coding, want flow | full-gate (default) | T2 auto-proceeds, T3 pauses only for real risk |
+| Solo coding, maximum speed | relaxed | T2 skips gate entirely, T3+ still gated |
+| Pair programming / review | strict | All tiers +1 for extra caution |
+| CI / unattended / cron | audit | T2/T3 auto-proceed with logging, T4 halts |
+| Cost-conscious usage | full-gate + tokencap | Adds a payload size gate on top of risk classification |
 
 ## How it works
 
@@ -162,9 +205,9 @@ The PreToolUse hook (`scripts/guardrails-enforce.py`) runs on every Bash, Write,
 - **Credential transmission** — reading .env/secrets and piping to curl/wget/netcat
 - **Catastrophic commands** — rm -rf /, fork bombs, dd to disk devices
 - **Credential in file writes** — API keys, private keys, AWS access keys in committed files
-- **Self-modification** — any attempt to edit the guardrails skill files
+- **Self-modification** — any attempt to edit guardrails files (skill files, enforcement script, hooks config, plugin metadata, command definitions) via Write, Edit, Bash redirect, or interpreter one-liners
 
-If a violation is detected, the hook exits with code 2 (hard block). Claude cannot override this.
+If a violation is detected, the hook exits with code 2 (hard block). Claude cannot override this. If the hook cannot parse its input, it fails closed (blocks) rather than silently allowing the action through.
 
 ### Why both?
 
@@ -205,7 +248,7 @@ Runtime files written to the project root during use:
 | `CLAUDE_PLUGIN_ROOT` | Claude Code | Absolute path to the installed plugin directory. Used by `hooks.json` to locate `guardrails-enforce.py`. |
 | `CLAUDE_PROJECT_DIR` | Claude Code | Absolute path to the current project. Used by the hook and skill to locate `guardrails_log.md` and `guardrails-mode.json`. |
 
-**If `CLAUDE_PLUGIN_ROOT` is not set** (e.g. when running the hook script manually or in tests), the script falls back to its own parent directory (`scripts/../` = plugin root). No action required — the fallback is automatic.
+**If `CLAUDE_PLUGIN_ROOT` is not set**, the hook command in `hooks.json` (`python ${CLAUDE_PLUGIN_ROOT}/scripts/guardrails-enforce.py`) will fail to resolve the script path — the env var is required for the installed hook to work. When running `guardrails-enforce.py` directly (e.g. in tests or manual invocation), the script falls back to its own parent directory (`scripts/../` = plugin root) as a convenience, but this fallback does not apply to the hook invocation itself.
 
 ## Security
 
@@ -227,13 +270,30 @@ claude plugin install gouvernai@mindxo --scope project
 ## Limitations
 
 - **Hooks cannot intercept MCP tool calls.** If Claude uses MCP servers to execute actions, the PreToolUse hook does not fire. The skill layer still applies (Claude reads SKILL.md and classifies MCP actions), but there is no deterministic enforcement.
-- **Skill compliance varies by model.** Tested informally on Claude Sonnet 4.6 (9/10 correct in Scenario A, 1 known low-risk issue accepted). Smaller models (Haiku) may have lower compliance rates.
-- **Hooks add ~10ms per tool call.** The Python script is lightweight, but it runs on every Bash/Write/Edit call.
+- **Skill compliance varies by model.** Tested on Claude Opus 4.6 and Claude Sonnet 4.6 — both show reliable gate compliance across all tiers. Smaller models (Haiku) may have lower compliance rates. Cross-model testing is ongoing.
+- **Hooks add ~10ms per tool call.** The Python script is lightweight, but it runs on every Bash/Write/Edit/Read call. When token cap is enabled, the hook also reads `guardrails-mode.json` on each call to check the threshold.
 - **Hook patterns target Unix/Bash syntax.** PowerShell equivalents (e.g. `Get-Content`, `Invoke-WebRequest`, `Remove-Item`) are not covered. Claude Code uses Bash on all platforms, so this is low risk for typical usage.
+- **Token cap uses a rough heuristic.** Token estimation is ~4 characters per token. This is adequate for gating large payloads but not billing-accurate. The cap is a governance tool, not a cost calculator.
 
 ## Threat model and limitations
 
 GouvernAI is an operational safety and governance layer, not a security boundary. In the defense-in-depth model described by the [2026 International AI Safety Report](https://internationalaisafetyreport.org/publication/2026-report-extended-summary-policymakers), it sits at the runtime layer — gating agent actions before execution through a combination of linguistic classification and pattern-based blocking.
+
+### What's deterministic vs best-effort
+
+| Protection | Layer | Reliability |
+|------------|-------|-------------|
+| Obfuscated command blocking | Hook (deterministic) | Hard block, no override |
+| Credential exfiltration (known patterns) | Hook (deterministic) | Hard block for matched patterns |
+| Catastrophic commands (rm -rf /) | Hook (deterministic) | Hard block, no override |
+| Self-modification prevention (full enforcement surface) | Hook (deterministic) | Hard block, no override |
+| Credential in file writes | Hook (deterministic) | Hard block for matched patterns |
+| Token cap (payload size) | Hook (deterministic) | Pause for approval when enabled |
+| Risk tier classification (T1–T4) | Skill (probabilistic) | Model-dependent, ~90% on Sonnet 4.6 |
+| Escalation rules | Skill (probabilistic) | Model-dependent |
+| Token cap (multi-step plan estimation) | Skill (probabilistic) | Heuristic-based |
+| MCP tool governance | Skill only (no hook) | Best-effort, no deterministic backstop |
+| Novel exfiltration techniques | Neither | Out of scope — use defense in depth |
 
 Its real value is:
 - Catching accidental destructive actions before they happen
@@ -244,21 +304,24 @@ Its real value is:
 It does not protect against sophisticated, determined adversaries. Regex-plus-prompt guardrails are effective at stopping mistakes, not targeted attacks.
 
 **What it catches:**
-- Single-command credential exfiltration (cat .env | curl)
-- Obfuscated command execution (base64 -d | bash)
-- Accidental writes to guardrails files
-- Catastrophic commands (rm -rf /, fork bombs)
-- Unintentional scope expansion (escalation rules)
-- Credential exposure in file writes (API keys in committed files)
+- Credential exfiltration via pipe, variable staging, and command substitution from known secret files (.env, .pem, .key, .secret, credentials, id_rsa)
+- Obfuscated command execution (base64 decode, eval, hex encoding, pipe to shell)
+- Writes to any guardrails enforcement file (skill files, hook script, hooks.json, plugin metadata, command definitions)
+- Interpreter-based self-modification attempts (python -c, node -e targeting guardrails paths)
+- Catastrophic commands (rm -rf /, fork bombs, dd to disk)
+- Credential exposure in file writes (API keys, private keys, AWS access keys in committed files)
+- Unintentional scope expansion (escalation rules via skill layer)
+- Large-payload actions exceeding a user-defined token cap (when enabled)
 
 **What it does NOT catch:**
-- Multi-step exfiltration where credentials are staged in variables across separate commands
-- Fragmented data extraction (extracting one character at a time)
-- Credential embedding in generated files that are later transmitted
+- Multi-step exfiltration where credentials are staged across separate commands using non-keyword variable names
+- Fragmented data extraction (one character at a time)
+- Credential embedding in generated files that are later transmitted in a separate action
 - Exfiltration disguised as legitimate work (health checks, config generation)
-- Attacks routed through MCP tools (hook layer bypassed entirely)
+- Attacks routed through MCP tools (hook layer bypassed entirely — skill layer provides best-effort coverage)
 - Novel obfuscation techniques not covered by current regex patterns
 - Prompt injection that convinces the model to ignore the skill layer
+- Variable staging from non-secret file extensions (e.g. `.txt`, `.yaml` — only known secret file patterns are matched)
 
 **Defense in depth:** GouvernAI is one layer in a multi-layer safety stack. For production or high-security environments, complement it with:
 - **Network egress policies** — restrict which external endpoints the agent can reach
