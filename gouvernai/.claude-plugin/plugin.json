@@ -1,7 +1,7 @@
 {
   "name": "gouvernai",
-  "version": "0.1.0",
-  "description": "Runtime guardrails for Claude Code. Classifies every sensitive action by risk tier, enforces proportional controls (notify / approve / halt), blocks dangerous operations with hard constraints, and logs a full audit trail. Zero dependencies. One install.",
+  "version": "0.2.0",
+  "description": "Achieve flow state safely with Claude Code. Auto-approves routine work, gates risky actions, hard-blocks dangerous patterns. Dual enforcement (skill + hooks), token cap for cost governance, full audit trail. Zero dependencies.",
   "author": {
     "name": "Myr-Aya"
   },
