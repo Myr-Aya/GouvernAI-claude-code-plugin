@@ -36,6 +36,16 @@ claude plugin marketplace add Myr-Aya/GouvernAI-claude-code-plugin
 # Then install the plugin
 claude plugin install gouvernai@mindxo
 ```
+## Why GouvernAI exists
+
+AI coding agents are powerful but unpredictable. In a single session, Claude Code might read a file, write a config, install a package, delete a directory, and curl an external API — all to fulfill one request. Most of that is fine. Some of it isn't: https://www.reddit.com/r/theprimeagen/comments/1rmgb6s/claude_code_wiped_production_database_with_a/
+
+The problem is that existing controls don't distinguish between the two. Claude Code's default prompts ask on *everything* — breaking your flow for a harmless file read the same way they would for a bulk delete. `--dangerously-skip-permissions` removes all prompts — giving you speed but zero safety net. Auto mode uses an opaque classifier you can't inspect or configure.
+
+GouvernAI exists because the answer shouldn't be all-or-nothing. Reads and drafts should flow through silently. File writes should proceed with a brief notice. Network calls should pause for your OK. Credential exfiltration should be hard-blocked — no override, no exceptions.
+
+That's what proportional controls mean: the right level of friction for the actual risk, with a transparent audit trail you can inspect after the fact.
+
 ## Usage
 
 **Claude Code Terminal:** Guardrails activate automatically on install. No configuration needed. GouvernAI works alongside Claude Code's native permission prompts — adding tier classification, escalation rules, and audit logging on top.
