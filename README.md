@@ -23,7 +23,7 @@
 
 > Auto-approve what's safe. Gate what's risky. Block what's dangerous.
 
-Achieve flow state safely — ~60% of agent actions are auto-approved with zero friction. File writes auto-approve with a brief notification. Guardrails only gate actions when risk is real: network calls, config changes, credential access, bulk operations.
+GouvernAI is a plugin to run Claude Code safely without constant permission prompts thats disrupt the workflow. Achieve flow state safely — ~60% of agent actions are auto-approved with zero friction. File writes auto-approve with a brief notification. Guardrails only gate actions when risk is real: network calls, config changes, credential access, bulk operations.
 
 Dual enforcement: Skill layer (proportional risk classification by Claude) + deterministic hooks (hard constraint blocking via PreToolUse). The hooks block obfuscated commands, credential exfiltration patterns, and catastrophic system commands — even if Claude skips the skill.
 
