@@ -11,25 +11,10 @@
       "description": "Achieve flow state safely with Claude Code. Auto-approves ~60% of actions, gates risky operations, hard-blocks dangerous patterns. Dual enforcement: skill layer + deterministic hooks. Token cap for cost governance. 120+ unit tests.",
       "version": "0.2.0",
       "author": {
-        "name": "Myr-Aya"
+        "name": "mindxo"
       },
       "source": "./gouvernai",
       "tags": ["security", "guardrails", "governance", "hooks", "dual-enforcement"],
-      "category": "security"
-    },
-    {
-      "name": "gouvernai-skill",
-      "description": "Safe flow state for Claude Code. Auto-approves routine actions, gates risky operations (approve / halt), and logs a full audit trail. Token cap for cost governance. Pure linguistic enforcement — zero dependencies, no hooks.",
-      "version": "0.2.0",
-       "author": {
-        "name": "Myr-Aya"
-      },
-      "source": {
-        "source": "github",
-        "repo": "Myr-Aya/GouvernAI-skill",
-        "path": "gouvernai-skill"
-      },
-      "tags": ["security", "guardrails", "governance", "skill-only"],
       "category": "security"
     }
   ]
