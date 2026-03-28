@@ -4,19 +4,19 @@
 
 Controls depend only on the final tier and the guardrails mode. They are the same for every action at that tier.
 
-### Tier 1 — Routine (Green)
+### Tier 1 — Routine (Green) · Auto-approved
 
-Not applicable. Tier 1 actions are excluded from the gate and do not trigger the gate process.
+Auto-approved. Tier 1 actions are excluded from the gate entirely — no classification, no logging, no token overhead.
 
-### Tier 2 — Standard (Amber)
+### Tier 2 — Standard (Amber) · Auto-approved with notification
 
 Modifies persistent local state or involves authenticated external reads.
 
-**Full gate:** Notify the user (briefly state the action and its tier classification). Proceed unless the user objects. Log.
+**Full gate:** Auto-approve with notification (briefly state the action and its tier classification). Proceed unless the user objects. Log.
 
-**Audit-only:** Auto-proceed. Log with action detail.
+**Audit-only:** Auto-approve. Log with action detail.
 
-### Tier 3 — Elevated (Red)
+### Tier 3 — Elevated (Red) · Requires approval
 
 Involves outbound data transmission, communication on behalf of the user, credential handling, or modifications to systems outside the local workspace.
 
@@ -24,7 +24,7 @@ Involves outbound data transmission, communication on behalf of the user, creden
 
 **Audit-only:** Auto-proceed. Alert the user with full details of the action taken. Log.
 
-### Tier 4 — Critical (Black)
+### Tier 4 — Critical (Black) · Requires approval after risk assessment
 
 Irreversible actions with significant consequences. Financial impact, bulk destruction, permission changes, public-facing effects, or attack surface modifications.
 
@@ -74,3 +74,16 @@ Set via `/guardrails audit` or by writing `"audit_only": true` to `guardrails-mo
 | T4 | **HALT.** Do NOT execute. Log with "HALTED" status. Alert immediately. |
 
 Hard constraints (POLICY.md NEVER rules) still apply in audit-only mode. The hook layer is unaffected.
+
+## Token cap (cost governance overlay)
+
+Set via `/guardrails tokencap <number>` or by writing `"token_cap": <number>` to `guardrails-mode.json`.
+
+When enabled, actions whose estimated token payload exceeds the cap receive T3 controls (pause + require approval), regardless of their risk tier. This is a cost governance feature — it does not change risk classification.
+
+- Token cap is an overlay: it does not lower the tier. A T4 action that also exceeds the cap still gets T4 controls.
+- Token cap applies after tier classification and escalation. If an action is already T3 or T4, the token cap adds no additional gate.
+- Token cap does not apply to guardrails internal operations (log writes, mode config, skill file reads).
+- When token_cap is null or not set, this check is inactive.
+
+The hook layer checks payload size deterministically. The skill layer estimates multi-step plan costs linguistically.
