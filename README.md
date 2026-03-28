@@ -9,7 +9,7 @@
   <a href="#install">Install</a> •
   <a href="#what-youll-see">What you'll see</a> •
   <a href="#how-it-works">How it works</a> •
-  <a href="#complements-claude-codes-auto-mode">vs Auto mode</a> •
+  <a href="#gouvernai-vs-auto-mode-vs---dangerously-skip-permissions">vs Auto mode</a> •
   <a href="#threat-model-and-limitations">Threat model</a>
 </p>
 
@@ -119,24 +119,29 @@ Full session audit trail showing every gated action with tier, outcome, and esca
 
 ![Audit log](assets/screenshots/audit-log.png)
 
-## The middle ground
+## GouvernAI vs auto mode vs --dangerously-skip-permissions
 
-Claude Code ships with two extremes: the default permission prompts that ask on every action, or `--dangerously-skip-permissions` that removes all prompts entirely. GouvernAI fills the gap between the two.
+Claude Code gives you three options for handling permissions. GouvernAI is designed to work with any of them — and adds the most value when native prompts are off.
+
+| | Default prompts | Auto mode | `--dangerously-skip-permissions` | + GouvernAI |
+|---|---|---|---|---|
+| **Routine actions** | Prompted every time | Auto-allowed | No safety net | Auto-approved silently |
+| **Risky actions** | Same prompt as routine | Binary allow/block | No safety net | Proportional gate (T3 pauses for approval) |
+| **Dangerous actions** | Same prompt as routine | Binary allow/block | No safety net | Hard-blocked by hooks |
+| **Policy** | Opaque, not editable | Opaque classifier | None | Transparent, editable files you own |
+| **Audit trail** | None | None | None | Full log with tier, outcome, escalation |
+| **Modes** | None | None | None | strict / relaxed / audit-only / token cap |
+| **Escalation rules** | None | None | None | Bulk ops, unfamiliar targets, scope expansion |
+| **Cost governance** | None | None | None | Token cap — pause when payload exceeds threshold |
+| **Plan required** | Any | Team / Enterprise | Any | Any |
 
 **With default prompts:** GouvernAI works alongside them — adding tier classification, escalation rules, and an audit trail on top of the native permission system.
 
-**With `--dangerously-skip-permissions`:** If you've chosen to disable native prompts for speed, GouvernAI adds back a proportional safety layer. Routine work stays fast, risky actions pause for approval, and dangerous patterns are hard-blocked by hooks regardless.
+**With auto mode:** GouvernAI's PreToolUse hooks run before the auto mode classifier. It adds proportional controls, transparent policies, and persistent configuration on top of auto mode's binary allow/block.
 
-| | Default prompts | `--dangerously-skip-permissions` alone | + GouvernAI |
-|---|---|---|---|
-| **Routine actions** | Prompted every time | No safety net | Auto-approved silently |
-| **Risky actions** | Same prompt as routine | No safety net | Pauses for approval (T3) |
-| **Dangerous actions** | Same prompt as routine | No safety net | Hard-blocked by hooks |
-| **Audit trail** | None | None | Full log with tier, outcome, escalation |
-| **Configurable** | No | No | strict / relaxed / audit-only / token cap |
-| **Escalation rules** | No | No | Bulk ops, unfamiliar targets, scope expansion |
+**With `--dangerously-skip-permissions`:** If you've chosen to disable native prompts for speed, GouvernAI adds back a proportional safety layer. This is where it adds the most value — routine work stays fast, risky actions pause, dangerous patterns are hard-blocked.
 
-GouvernAI works with either setup. It adds the most value when native prompts are off — but it never requires you to disable them.
+GouvernAI works with any setup. It never requires you to change your permission mode.
 
 ## Slash commands
 
