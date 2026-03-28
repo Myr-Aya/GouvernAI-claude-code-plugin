@@ -1,10 +1,10 @@
 ---
 name: gouvernai
 description: |
-  Runtime guardrails for agent actions. Activates automatically when the agent is about to:
+  Safe flow state for Claude Code. Auto-approves routine actions, activates when the agent is about to:
   write files, run shell commands, send messages, access credentials, make API calls,
   install packages, modify config, or perform any irreversible operation.
-  Also activates when user invokes /guardrails.
+  Also activates when user invokes /guardrails, or when token cap is exceeded.
 ---
 
 # 🛡️ GouvernAI
@@ -17,8 +17,8 @@ Runtime guardrails for AI agents. Classifies every sensitive action by risk tier
 
 | Situation | Action |
 |-----------|--------|
-| Read file, git status, draft message | Excluded — proceed normally, no gate |
-| Write to user file, git commit | 🛡️ T2 — notify user, proceed unless objected, log |
+| Read file, git status, draft message | Auto-approved — zero gate, zero overhead |
+| Write to user file, git commit | 🛡️ T2 — auto-approved with notification, log |
 | Send email, modify config, delete files, curl, npm install | 🛡️ T3 — pause, require approval, log |
 | sudo, credential transmit, purchase, public post | 🛡️ T4 — full stop, warn, require approval, log |
 | Credential transmission, obfuscated command | 🛡️ BLOCKED — hard constraint, no override |
@@ -103,9 +103,34 @@ These patterns require judgment — not every variable assignment followed by a 
 
 **Step 7 — Controls.** Apply the universal control from TIERS.md for the final tier × mode.
 
-**Step 8 — Log and execute.** Append to `guardrails_log.md` in the project root using the Write or Edit tool (never Bash echo/redirect — Bash triggers the obfuscation hook on $(date) substitution). Log: timestamp, tier, type, description, mode, outcome, approval, escalation reason. Execute or halt..
+**Step 8 — Log and execute.** Append to `guardrails_log.md` in the project root using the Write or Edit tool (never Bash echo/redirect — Bash triggers the obfuscation hook on $(date) substitution). Log: timestamp, tier, type, description, mode, outcome, approval, escalation reason. Execute or halt. **Do NOT read back, display, or echo the log after writing.** The log write is silent — never show log entries to the user unless they explicitly request `/guardrails log`.
 
 **Note:** Writes to `guardrails_log.md` are exempt from the gate.
+
+**Note:** After writing to the log, do NOT read the log file back or display its contents. Log writes are silent. Only show log entries when the user runs `/guardrails log`.
+
+## Token cap (cost governance)
+
+When `token_cap` is set in `guardrails-mode.json`, estimate the token cost of your planned action before executing.
+
+**What counts toward the estimate:**
+- File content being written (Write/Edit payload)
+- Shell command length (Bash)
+- For multi-step plans: sum the estimated tokens of all planned actions in the current turn
+
+**How to estimate:** Use ~4 characters = 1 token as a rough heuristic.
+
+**When the estimate exceeds the cap:**
+- Apply T3 controls: pause, present the estimated token count and the cap to the user, wait for approval
+- Format: `🛡️ **T3 — Token cap**: Estimated ~[N] tokens (cap: [cap]). [Brief description of planned actions]. Approve? (yes/no)`
+- Log with "TOKEN-CAP" tag
+
+**The hook layer also checks payload size deterministically.** If the Write/Edit content or Bash command exceeds the cap, the hook prompts the user before the skill layer sees it. The skill layer adds coverage for multi-step plans where individual payloads are under the cap but the total exceeds it.
+
+**Token cap does not apply to:**
+- Guardrails internal file operations (log writes, mode config reads/writes)
+- Read operations
+- Actions where token_cap is null or not set
 
 ## Actions not in the catalog
 
