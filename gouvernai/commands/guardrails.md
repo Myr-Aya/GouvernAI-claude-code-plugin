@@ -1,6 +1,6 @@
 ---
 name: guardrails
-description: "Show guardrails status, switch modes, or view the audit log. Usage: /guardrails [status|log|strict|relaxed|audit|reset|policy]"
+description: "Show guardrails status, switch modes, set token cap, or view the audit log. Usage: /guardrails [status|log|strict|relaxed|audit|reset|policy|tokencap]"
 ---
 
 Show the current guardrails status and provide mode controls.
@@ -14,6 +14,7 @@ Schema:
 {
   "mode": "full-gate",
   "audit_only": false,
+  "token_cap": null,
   "set_at": "<ISO 8601 timestamp>",
   "set_by": "user"
 }
@@ -21,6 +22,7 @@ Schema:
 
 Valid `mode` values: `"full-gate"` (default), `"strict"`, `"relaxed"`.
 `audit_only: true` overrides tier controls — T2/T3 auto-proceed with logging, T4 halts without executing.
+`token_cap`: integer or null. When set to an integer, actions whose estimated payload exceeds this token count pause for approval (T3 gate). When null or absent, the token cap is inactive.
 
 ## Commands
 
@@ -30,6 +32,7 @@ If the user typed `/guardrails` with no argument or `/guardrails status`:
 - Show tier distribution for this session (how many T2, T3, T4 actions gated)
 - Show approval/denial counts
 - Show whether any pre-approved patterns are active
+- Show token cap setting: if token_cap is set in the config, show "Token cap: <N> tokens"; otherwise "Token cap: not set"
 
 If the user typed `/guardrails log`:
 - Read and display the last 20 entries from `guardrails_log.md` in the project root
@@ -53,3 +56,20 @@ If the user typed `/guardrails reset`:
 
 If the user typed `/guardrails policy`:
 - Read and display the hard constraints from POLICY.md in the skill directory
+
+If the user typed `/guardrails tokencap <number>`:
+- Read the existing `guardrails-mode.json` (if it exists) to preserve current mode and audit_only settings
+- Add or update the `token_cap` field with the integer value
+- Write the updated config to `guardrails-mode.json` in the project root
+- Confirm: "🛡️ Token cap set to <number> tokens. Actions exceeding this will pause for approval. Persists across sessions until changed."
+
+If the user typed `/guardrails tokencap off`:
+- Read the existing `guardrails-mode.json` (if it exists) to preserve current mode settings
+- Set `token_cap` to null
+- Write the updated config to `guardrails-mode.json`
+- Confirm: "🛡️ Token cap disabled."
+
+If the user typed `/guardrails tokencap` (no argument):
+- Read `guardrails-mode.json` and show the current token cap value
+- If not set or null: "Token cap: not set (all actions proceed regardless of size)"
+- If set: "Token cap: <number> tokens. Actions exceeding this pause for approval."
