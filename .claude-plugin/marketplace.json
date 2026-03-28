@@ -4,12 +4,12 @@
   "owner": {
     "name": "Myr-Aya"
   },
-  "description": "AI governance and guardrails by MindXO — runtime risk classification, proportional controls, and audit logging for AI agents",
+  "description": "Safe flow state for AI agents — auto-approve routine work, gate risky actions, hard-block dangerous patterns. By MindXO.",
   "plugins": [
     {
       "name": "gouvernai",
-      "description": "Runtime guardrails for Claude Code with dual enforcement. Linguistic skill (risk classification, approval gates) + deterministic hooks (hard blocking of obfuscated commands, credential exfiltration, catastrophic operations). 67 unit tests.",
-      "version": "0.1.0",
+      "description": "Achieve flow state safely with Claude Code. Auto-approves ~60% of actions, gates risky operations, hard-blocks dangerous patterns. Dual enforcement: skill layer + deterministic hooks. Token cap for cost governance. 120+ unit tests.",
+      "version": "0.2.0",
       "author": {
         "name": "Myr-Aya"
       },
@@ -19,8 +19,8 @@
     },
     {
       "name": "gouvernai-skill",
-      "description": "Runtime guardrails skill for Claude Code. Classifies every sensitive action by risk tier, enforces proportional controls (notify / approve / halt), and logs a full audit trail. Pure linguistic enforcement — zero dependencies, no hooks. Works everywhere Claude Code runs.",
-      "version": "0.1.0",
+      "description": "Safe flow state for Claude Code. Auto-approves routine actions, gates risky operations (approve / halt), and logs a full audit trail. Token cap for cost governance. Pure linguistic enforcement — zero dependencies, no hooks.",
+      "version": "0.2.0",
        "author": {
         "name": "Myr-Aya"
       },
