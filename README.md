@@ -8,12 +8,10 @@
 <p align="center">
   <a href="#install">Install</a> •
   <a href="#what-youll-see">What you'll see</a> •
-  <a href="#how-it-works">How it works</a> •
+  <a href="#how-it-works-dual-enforcement">How it works</a> •
   <a href="#gouvernai-vs-auto-mode-vs---dangerously-skip-permissions">vs Auto mode</a> •
   <a href="#threat-model-and-limitations">Threat model</a>
 </p>
-
-
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Tests](https://img.shields.io/badge/tests-120%2B%20passing-brightgreen)
@@ -23,48 +21,85 @@
 
 > Auto-approve what's safe. Gate what's risky. Block what's dangerous.
 
-GouvernAI is a plugin to run Claude Code safely without constant permission prompts thats disrupt the workflow. Achieve flow state safely — ~60% of agent actions are auto-approved with zero friction. File writes auto-approve with a brief notification. Guardrails only gate actions when risk is real: network calls, config changes, credential access, bulk operations.
+## The problem
 
-Dual enforcement: Skill layer (proportional risk classification by Claude) + deterministic hooks (hard constraint blocking via PreToolUse). The hooks block obfuscated commands, credential exfiltration patterns, and catastrophic system commands — even if Claude skips the skill.
+Claude Code's default permission prompts ask you to approve everything. A harmless file read gets the same interruption as a bulk delete. `--dangerously-skip-permissions` removes all prompts, giving you speed but zero safety net. Anthropic's auto mode uses a classifier you can't inspect or edit, and it's limited to Team and Enterprise plans.
+
+The answer shouldn't be all-or-nothing. The goal is not "prompt on everything" or "trust auto mode," but a middle path: keep flow for ordinary work, add friction where risk rises, and hard-block the small class of actions that should never pass silently.
+
+## What you'll see
+
+Most of the time, GouvernAI is invisible. ~60% of typical agent actions are reads, drafts, and navigation — auto-approved with zero overhead. When risk is real, it steps in proportionally:
+
+| Risk | Actions | What happens |
+|------|---------|--------------|
+| **T1** | reads, drafts, git status | Auto-approved. Zero overhead, zero friction. |
+| **T2** | file writes, git commit | Auto-approved with brief notification. Keeps going unless you object. |
+| **T3** | npm install, curl, email, config | Requires approval — pauses only when consequences are real. |
+| **T4** | sudo, credential transmit, bulk delete | Requires approval after risk assessment — because it should. |
+| **BLOCKED** | obfuscated commands, credential exfil | Hard block. No override. Even if Claude skips the skill. |
+
+<p align="center">
+  <img src="assets/screenshots/t3-npm-install.png" alt="T3 — pauses for approval on npm install" width="700">
+</p>
+
+## How it works: dual enforcement
+
+The key design choice is dual enforcement — two layers, each covering the other's gaps:
+
+- **Skill layer (probabilistic):** Claude reads SKILL.md and classifies actions through an 8-step gate process. Handles nuanced judgment — is this a Tier 2 or Tier 3? Should an unfamiliar endpoint escalate the tier?
+- **Hook layer (deterministic):** A PreToolUse hook (`guardrails-enforce.py`, ~200 lines of Python) runs on every Bash, Write, and Edit call. Hard-blocks obfuscated commands, credential exfiltration, catastrophic operations, and self-modification attempts. Exit code 2 = blocked. Claude cannot override this.
+
+Skills are flexible but probabilistic — Claude might skip classification on complex tasks. Hooks are rigid but guaranteed — they run every time, no exceptions.
 
 ## Install
 
+### CLI (Claude Code Terminal)
+
 ```bash
-# Add the marketplace first
+# Step 1 — Add the marketplace (one-time)
 claude plugin marketplace add Myr-Aya/GouvernAI-claude-code-plugin
 
-# Then install the plugin
+# Step 2 — Install the plugin
 claude plugin install gouvernai@mindxo
 ```
-## Why GouvernAI exists
 
-AI coding agents are powerful but unpredictable. In a single session, Claude Code might read a file, write a config, install a package, delete a directory, and curl an external API — all to fulfill one request. Most of that is fine. Some of it isn't: https://www.reddit.com/r/theprimeagen/comments/1rmgb6s/claude_code_wiped_production_database_with_a/
+### Desktop (Claude Code Desktop app)
 
-The problem is that existing controls don't distinguish between the two. Claude Code's default prompts ask on *everything* — breaking your flow for a harmless file read the same way they would for a bulk delete. `--dangerously-skip-permissions` removes all prompts — giving you speed but zero safety net. Auto mode uses an opaque classifier you can't inspect or configure.
+1. Open Claude Code Desktop
+2. Type `/plugin` and go to the **Discover** tab
+3. If you haven't added the marketplace yet, run:
+   ```
+   /plugin marketplace add Myr-Aya/GouvernAI-claude-code-plugin
+   ```
+4. Find **gouvernai** in the list and press Enter to install
+5. Choose your scope: **User** (recommended), Project, or Local
 
-GouvernAI exists because the answer shouldn't be all-or-nothing. Reads and drafts should flow through silently. File writes should proceed with a brief notice. Network calls should pause for your OK. Credential exfiltration should be hard-blocked — no override, no exceptions.
+### After install
 
-That's what proportional controls mean: the right level of friction for the actual risk, with a transparent audit trail you can inspect after the fact.
+Guardrails activate automatically on the next session. No configuration required.
 
-## Usage
-
-**Claude Code Terminal:** Guardrails activate automatically on install. No configuration needed. GouvernAI works alongside Claude Code's native permission prompts — adding tier classification, escalation rules, and audit logging on top.
-
-**With `--dangerously-skip-permissions`:** If you already use Claude Code with native prompts disabled, GouvernAI adds back proportional safety — auto-approving routine work, gating risky actions, and hard-blocking dangerous patterns. This is where GouvernAI adds the most value.
-
-```bash
-claude --dangerously-skip-permissions --plugin-dir /path/to/gouvernai
-```
-
-**Claude Code Desktop:** Run `/gouvernai:guardrails` at the start of your session to activate the gate. The skill may not auto-trigger reliably in these environments.
+GouvernAI works alongside Claude Code's native permission prompts — adding tier classification, escalation rules, and audit logging on top. It never requires you to change your permission mode.
 
 ## Quick test
 
 Try these after installing to see the guardrails in action:
 
-1. **Auto-approved:** `git status` — Tier 1, auto-approved, zero overhead
+1. **Auto-approved:** `git status` — Tier 1, zero overhead
 2. **Auto-approved with notice:** Ask Claude to write a file — Tier 2, brief notification, keeps going
 3. **Blocked:** Ask Claude to run `echo aGVsbG8= | base64 -d | bash` — hook blocks with exit code 2
+
+## Usage
+
+**Claude Code Terminal:** Guardrails activate automatically on install. No configuration needed.
+
+**With `--dangerously-skip-permissions`:** If you already use Claude Code with native prompts disabled, GouvernAI adds back proportional safety — auto-approving routine work, gating risky actions, and hard-blocking dangerous patterns. This is where GouvernAI adds the most value.
+
+```bash
+claude --dangerously-skip-permissions
+```
+
+**Claude Code Desktop:** If the skill doesn't auto-trigger, run `/gouvernai:guardrails` at the start of your session to activate the gate.
 
 ## What you'll see
 
