@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "Achieve flow state safely with Claude Code. Auto-approves routine work, gates risky actions, hard-blocks dangerous patterns. Dual enforcement (skill + hooks), token cap for cost governance, full audit trail. Zero dependencies.",
   "author": {
-    "name": "Myr-Aya"
+    "name": "MindXO"
   },
   "repository": "https://github.com/Myr-Aya/GouvernAI-claude-code-plugin",
   "homepage": "https://gouvernai.ai",
