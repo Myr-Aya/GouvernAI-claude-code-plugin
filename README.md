@@ -358,7 +358,10 @@ No single layer is sufficient. The 2026 International AI Safety Report's Swiss c
 
 ## Uninstallation
 
-To uninstall: `claude plugin uninstall gouvernai@mindxo` or go to Browse plugins → Personal → select the plugin → Uninstall.
+To uninstall: `claude plugin uninstall gouvernai@mindxo`
+and ` claude plugin marketplace remove mindxo `
+
+or go to Browse plugins → Personal → select the plugin → Uninstall.
 
 ## License
 
