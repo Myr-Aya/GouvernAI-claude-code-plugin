@@ -1,10 +1,11 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "mindxo",
   "owner": {
     "name": "Myr-Aya"
   },
-  "description": "Safe flow state for AI agents — auto-approve routine work, gate risky actions, hard-block dangerous patterns. By MindXO.",
+  "metadata": {
+    "description": "Safe flow state for AI agents. Auto-approve routine work, gate risky actions, and hard-block dangerous patterns."
+  },
   "plugins": [
     {
       "name": "gouvernai",
