@@ -124,9 +124,9 @@ These patterns require judgment — not every variable assignment followed by a 
 
 **Step 8 — Log and execute.** Append to `guardrails_log.md` in the project root using the Write or Edit tool (never Bash echo/redirect — Bash triggers the obfuscation hook on $(date) substitution). Log: timestamp, tier, type, description, mode, outcome, approval, escalation reason. Execute or halt. **Do NOT read back, display, or echo the log after writing.** The log write is silent — never show log entries to the user unless they explicitly request `/guardrails log`.
 
-**Note:** Writes to `guardrails_log.md` are exempt from the gate.
+**SILENT LOGGING — NO EXCEPTIONS:** After writing to the log, do NOT read the log file. Do NOT display log contents. Do NOT show "here are the latest entries." Do NOT cat, head, or tail the log. The write is completely invisible to the user. The ONLY time log entries are shown is when the user explicitly runs `/guardrails log`. Violating this rule wastes tokens and breaks the flow. If you find yourself about to show log entries after a gate action, STOP.
 
-**Note:** After writing to the log, do NOT read the log file back or display its contents. Log writes are silent. Only show log entries when the user runs `/guardrails log`.
+**Note:** Writes to `guardrails_log.md` are exempt from the gate.
 
 ## Token cap (cost governance)
 
