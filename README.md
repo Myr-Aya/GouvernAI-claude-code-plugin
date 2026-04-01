@@ -43,47 +43,41 @@ Dual enforcement: a skill layer handles nuanced risk classification (is this Tie
 
 ## Install
 
-### CLI (Claude Code Terminal)
+### Step 1 — Add the marketplace and install the plugin
+
+Run these in your terminal (not inside a Claude Code session):
 
 ```bash
-# Step 1 — Add the marketplace (one-time)
 claude plugin marketplace add Myr-Aya/GouvernAI-claude-code-plugin
-
-# Step 2 — Install the plugin
 claude plugin install gouvernai@mindxo
 ```
 
-### Desktop (Claude Code Desktop app)
+### Step 2 — Activate guardrails in each session
 
-1. Type `/plugin` and go to the **Discover** tab
-2. If you haven't added the marketplace yet, run:
-   ```
-   /plugin marketplace add Myr-Aya/GouvernAI-claude-code-plugin
-   ```
-3. Find **gouvernai** in the list and press Enter to install
-4. Choose your scope: **User** (recommended), Project, or Local
+After launching Claude Code (terminal or desktop), type:
 
-Guardrails activate automatically on the next session. No configuration required.
+```
+/gouvernai
+```
+This activates the skill layer (risk classification, escalation rules, audit logging) and the hook layer (deterministic blocking of obfuscated commands, credential exfiltration, and catastrophic operations) for the rest of the session.
 
-## Quick test
+> **Why is this step needed?** Claude Code has a [known issue](https://github.com/anthropics/claude-code/issues/18547) where plugin hooks defined in `hooks/hooks.json` are not loaded automatically on some platforms. Running `/gouvernai` activates the hooks registered in the skill's frontmatter, ensuring both enforcement layers are active. We're tracking this upstream — once resolved, guardrails will activate automatically with no manual step.
 
-Try these after installing to see the guardrails in action:
+### Verify it's working
 
+After activating, try these:
 1. **Auto-approved:** `git status` — Tier 1, zero overhead
 2. **Auto-approved with notice:** Ask Claude to write a file — Tier 2, brief notification, keeps going
-3. **Blocked:** Ask Claude to run `echo aGVsbG8= | base64 -d | bash` — hook blocks with exit code 2
+3. **Skill gate test:** Ask Claude to delete several dummy files — you should see a 🛡️ T3 or T4 classification with an approval prompt
+4. **Hook block test:** Ask Claude to write a file containing `API_KEY = 'AKIAIOSFODNN7EXAMPLE'` — the hook should block it with `🛡️ BLOCKED by guardrails hook`
 
 ## Usage
 
-**Claude Code Terminal:** Guardrails activate automatically on install. No configuration needed. GouvernAI works alongside Claude Code's native permission prompts — adding tier classification, escalation rules, and audit logging on top.
+**DefaultMode**: GouvernAI complements Claude Code built-in guardrails with and extra safety layer.
 
 **With `--dangerously-skip-permissions`:** If you already use Claude Code with native prompts disabled, GouvernAI adds back proportional safety — auto-approving routine work, gating risky actions, and hard-blocking dangerous patterns. This is where GouvernAI adds the most value.
 
-```bash
-claude --dangerously-skip-permissions
-```
-
-**Claude Code Desktop:** If the skill doesn't auto-trigger, run `/gouvernai:guardrails` at the start of your session to activate the gate.
+**Claude Code Desktop:** If the skill doesn't auto-trigger, run `/gouvernai` at the start of your session to activate the gate.
 
 ## What you'll see
 
