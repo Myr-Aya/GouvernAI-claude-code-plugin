@@ -1,10 +1,29 @@
 ---
+---
 name: gouvernai
 description: |
   Safe flow state for Claude Code. Auto-approves routine actions, activates when the agent is about to:
   write files, run shell commands, send messages, access credentials, make API calls,
   install packages, modify config, or perform any irreversible operation.
   Also activates when user invokes /guardrails, or when token cap is exceeded.
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/guardrails-enforce.py"
+    - matcher: "Write"
+      hooks:
+        - type: command
+          command: "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/guardrails-enforce.py"
+    - matcher: "Edit"
+      hooks:
+        - type: command
+          command: "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/guardrails-enforce.py"
+    - matcher: "Read"
+      hooks:
+        - type: command
+          command: "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/guardrails-enforce.py"
 ---
 
 # 🛡️ GouvernAI
