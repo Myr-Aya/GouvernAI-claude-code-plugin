@@ -62,6 +62,18 @@ After launching Claude Code (terminal or desktop), type:
 This activates the skill layer (risk classification, escalation rules, audit logging) and the hook layer (deterministic blocking of obfuscated commands, credential exfiltration, and catastrophic operations) for the rest of the session.
 
 > **Why is this step needed?** Claude Code has a [known issue](https://github.com/anthropics/claude-code/issues/18547) where plugin hooks defined in `hooks/hooks.json` are not loaded automatically on some platforms. Running `/gouvernai` activates the hooks registered in the skill's frontmatter, ensuring both enforcement layers are active. We're tracking this upstream — once resolved, guardrails will activate automatically with no manual step.
+>
+> **Default workaround:** Run `/gouvernai` at the start of your session. This loads the plugin and activates the hooks for the remainder of the session. The skill layer works regardless.
+
+**Manual hook registration (recommended for stricter security):** Copy the hook configuration into your `~/.claude/settings.json` so hooks fire from session start without requiring any command:
+
+**Note:** If you use manual registration, `${CLAUDE_PLUGIN_ROOT}` may not resolve in settings.json. Replace it with the absolute path to your installed plugin, for example:
+
+- Linux/macOS: `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/scripts/guardrails-enforce.py`
+- Windows: `%USERPROFILE%\.claude\plugins\cache\<marketplace>\<plugin>\<version>\scripts\guardrails-enforce.py`
+
+The tradeoff with manual registration is that hook config in settings.json does not auto-update when the plugin updates. After updating GouvernAI, check whether the hook configuration has changed and update settings.json accordingly.
+
 
 ### Verify it's working
 
