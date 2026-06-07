@@ -222,6 +222,31 @@ def check_file_write(file_path, content=""):
                     return True
     return False
 
+def extract_edit_content(tool_name, tool_input):
+    """Return the text a Write/Edit/MultiEdit tool would commit to disk.
+
+    Field names must match the real Claude Code tool schema or content checks
+    silently pass empty text:
+      - Write     → "content"
+      - Edit      → "new_string"  (NOT "new_str"; legacy fallbacks kept)
+      - MultiEdit → join of every edits[].new_string
+    """
+    if tool_name == "Write":
+        return tool_input.get("content", "")
+    if tool_name == "Edit":
+        return (tool_input.get("new_string")
+                or tool_input.get("new_str")
+                or tool_input.get("content")
+                or "")
+    if tool_name == "MultiEdit":
+        edits = tool_input.get("edits", [])
+        if isinstance(edits, list):
+            return "\n".join(
+                e.get("new_string", "") for e in edits if isinstance(e, dict)
+            )
+        return ""
+    return tool_input.get("content") or tool_input.get("new_string") or ""
+
 def get_token_cap():
     """Read token cap from guardrails-mode.json. Returns None if not set."""
     try:
@@ -251,8 +276,8 @@ def check_token_cap(tool_name, tool_input):
     if tool_name == "Bash":
         command = tool_input.get("command", "")
         estimated = estimate_tokens(command)
-    elif tool_name in ("Write", "Edit"):
-        content = tool_input.get("content", tool_input.get("new_str", ""))
+    elif tool_name in ("Write", "Edit", "MultiEdit"):
+        content = extract_edit_content(tool_name, tool_input)
         estimated = estimate_tokens(content)
     return estimated > cap, estimated, cap
 
@@ -340,10 +365,10 @@ def main():
             print(json.dumps(output))
             sys.exit(0)
 
-    # ── Write/Edit tool checks ──
-    elif tool_name in ("Write", "Edit"):
+    # ── Write/Edit/MultiEdit tool checks ──
+    elif tool_name in ("Write", "Edit", "MultiEdit"):
         file_path = tool_input.get("file_path", tool_input.get("path", ""))
-        content = tool_input.get("content", tool_input.get("new_str", ""))
+        content = extract_edit_content(tool_name, tool_input)
 
         # Auto-approve writes to guardrails_log.md and guardrails-mode.json
         basename = os.path.basename(file_path)
