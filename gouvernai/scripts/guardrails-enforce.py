@@ -48,7 +48,9 @@ def block(reason, detail=""):
     log_block(reason, detail)
     output = {
         "hookSpecificOutput": {
-            "permissionDecision": "deny"
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": f"{reason}: {detail}" if detail else reason
         },
         "systemMessage": f"🛡️ BLOCKED by guardrails hook — {reason}: {detail}"
     }

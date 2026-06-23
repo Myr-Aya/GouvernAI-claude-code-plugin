@@ -146,6 +146,40 @@ class TestBlockObfuscated(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+class TestDenyOutputContract(unittest.TestCase):
+    """Regression: a deny MUST carry hookEventName == 'PreToolUse'.
+
+    Claude Code silently drops a hookSpecificOutput that omits hookEventName, so a
+    deny without it exits 2 but the tool still proceeds live (skill auto-approve wins).
+    These tests pin the shape of the deny payload, not just the exit code.
+    """
+
+    def _assert_well_formed_deny(self, out):
+        self.assertIsNotNone(out, "deny must print a JSON payload on stdout")
+        hso = out["hookSpecificOutput"]
+        self.assertEqual(hso["hookEventName"], "PreToolUse")
+        self.assertEqual(hso["permissionDecision"], "deny")
+        self.assertTrue(hso.get("permissionDecisionReason"),
+                        "deny should explain itself via permissionDecisionReason")
+
+    def test_bash_deny_payload_shape(self):
+        code, out = run_hook(bash("rm -rf /"))
+        self.assertEqual(code, 2)
+        self._assert_well_formed_deny(out)
+
+    def test_write_credential_deny_payload_shape(self):
+        code, out = run_hook(write("/home/user/project/config.py",
+                                   "API_KEY = 'AKIAIOSFODNN7EXAMPLE'"))
+        self.assertEqual(code, 2)
+        self._assert_well_formed_deny(out)
+
+    def test_edit_credential_deny_payload_shape(self):
+        code, out = run_hook(edit("/home/user/project/config.py",
+                                  "API_KEY = 'AKIAIOSFODNN7EXAMPLE'"))
+        self.assertEqual(code, 2)
+        self._assert_well_formed_deny(out)
+
+
 class TestBlockCredentialExposure(unittest.TestCase):
 
     def test_cat_env_pipe_curl(self):
