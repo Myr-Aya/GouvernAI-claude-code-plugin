@@ -57,6 +57,27 @@ def block(reason, detail=""):
     print(json.dumps(output))
     sys.exit(2)
 
+def ask(reason, detail="", system_message=""):
+    """Emit an 'ask' decision (prompt the user for approval) and exit 0.
+
+    Mirrors block()'s payload contract so this path can't silently drift:
+    a PreToolUse hookSpecificOutput MUST include hookEventName (Claude Code
+    drops the output otherwise), and the decision value must be "ask" — the
+    invalid "ask_user" is never honored, so the gate would be skipped live.
+    """
+    if not system_message:
+        system_message = f"🛡️ {reason}: {detail}" if detail else f"🛡️ {reason}"
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "ask",
+            "permissionDecisionReason": f"{reason}: {detail}" if detail else reason
+        },
+        "systemMessage": system_message
+    }
+    print(json.dumps(output))
+    sys.exit(0)
+
 def check_obfuscated_command(command):
     """NEVER rule 2: Never execute obfuscated commands."""
     patterns = [
@@ -358,14 +379,8 @@ def main():
         # Token cap (must be last — hard constraints take priority)
         exceeds, estimated, cap = check_token_cap(tool_name, tool_input)
         if exceeds:
-            output = {
-                "hookSpecificOutput": {
-                    "permissionDecision": "ask_user"
-                },
-                "systemMessage": f"🛡️ TOKEN CAP — Estimated {estimated:,} tokens (cap: {cap:,}). This action requires approval."
-            }
-            print(json.dumps(output))
-            sys.exit(0)
+            msg = f"Estimated {estimated:,} tokens (cap: {cap:,}). This action requires approval."
+            ask("Token cap exceeded", msg, system_message=f"🛡️ TOKEN CAP — {msg}")
 
     # ── Write/Edit/MultiEdit tool checks ──
     elif tool_name in ("Write", "Edit", "MultiEdit"):
@@ -402,14 +417,8 @@ def main():
         # Token cap (must be last — hard constraints take priority)
         exceeds, estimated, cap = check_token_cap(tool_name, tool_input)
         if exceeds:
-            output = {
-                "hookSpecificOutput": {
-                    "permissionDecision": "ask_user"
-                },
-                "systemMessage": f"🛡️ TOKEN CAP — Estimated {estimated:,} tokens (cap: {cap:,}). This action requires approval."
-            }
-            print(json.dumps(output))
-            sys.exit(0)
+            msg = f"Estimated {estimated:,} tokens (cap: {cap:,}). This action requires approval."
+            ask("Token cap exceeded", msg, system_message=f"🛡️ TOKEN CAP — {msg}")
 
     # No violation detected
     sys.exit(0)

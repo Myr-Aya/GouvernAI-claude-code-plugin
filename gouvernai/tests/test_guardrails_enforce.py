@@ -180,6 +180,70 @@ class TestDenyOutputContract(unittest.TestCase):
         self._assert_well_formed_deny(out)
 
 
+class TestAskOutputContract(unittest.TestCase):
+    """Regression: a token-cap 'ask' MUST carry hookEventName and use "ask".
+
+    Same failure mode as the deny contract (see TestDenyOutputContract): Claude
+    Code silently drops a hookSpecificOutput that omits hookEventName, and
+    "ask_user" is not a valid permissionDecision. Either defect makes the cap
+    prompt vanish live, so the oversized action proceeds unprompted. These tests
+    pin the ask payload shape across every tool that can hit the cap.
+    """
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp()
+        self.config_path = os.path.join(self.tmpdir, "guardrails-mode.json")
+        with open(self.config_path, "w") as f:
+            json.dump({"mode": "full-gate", "audit_only": False, "token_cap": 1000}, f)
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _run(self, payload):
+        env = os.environ.copy()
+        env["CLAUDE_PROJECT_DIR"] = self.tmpdir
+        result = subprocess.run(
+            [sys.executable, SCRIPT],
+            input=json.dumps(payload).encode(),
+            capture_output=True,
+            env=env,
+        )
+        stdout = result.stdout.decode().strip()
+        return result.returncode, (json.loads(stdout) if stdout else None)
+
+    def _assert_well_formed_ask(self, out):
+        self.assertIsNotNone(out, "ask must print a JSON payload on stdout")
+        hso = out["hookSpecificOutput"]
+        self.assertEqual(hso["hookEventName"], "PreToolUse")
+        self.assertEqual(hso["permissionDecision"], "ask")
+        self.assertNotEqual(hso["permissionDecision"], "ask_user",
+                            "'ask_user' is not a valid decision and is dropped live")
+        self.assertTrue(hso.get("permissionDecisionReason"),
+                        "ask should explain itself via permissionDecisionReason")
+
+    def test_bash_over_cap_ask_payload_shape(self):
+        code, out = self._run(bash("echo " + "x" * 8000))
+        self.assertEqual(code, 0)
+        self._assert_well_formed_ask(out)
+
+    def test_write_over_cap_ask_payload_shape(self):
+        code, out = self._run(write("/home/user/project/big.txt", "x" * 8000))
+        self.assertEqual(code, 0)
+        self._assert_well_formed_ask(out)
+
+    def test_edit_over_cap_ask_payload_shape(self):
+        code, out = self._run(edit("/home/user/project/big.py", "y" * 8000))
+        self.assertEqual(code, 0)
+        self._assert_well_formed_ask(out)
+
+    def test_multiedit_over_cap_ask_payload_shape(self):
+        code, out = self._run(multiedit("/home/user/project/big.py", ["z" * 8000]))
+        self.assertEqual(code, 0)
+        self._assert_well_formed_ask(out)
+
+
 class TestBlockCredentialExposure(unittest.TestCase):
 
     def test_cat_env_pipe_curl(self):
@@ -869,7 +933,7 @@ class TestTokenCap(unittest.TestCase):
         self.assertEqual(code, 0)
 
     def test_write_over_cap_asks_user(self):
-        """Write with content over the token cap should trigger ask_user."""
+        """Write with content over the token cap should prompt the user for approval (ask)."""
         large_content = "x" * 8000  # ~2000 tokens at 4 chars/token
         code, out = self.run_hook_with_cap(
             write("/home/user/project/large.txt", large_content),
@@ -877,38 +941,38 @@ class TestTokenCap(unittest.TestCase):
         )
         self.assertEqual(code, 0)  # exit 0, not exit 2
         self.assertIsNotNone(out)
-        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask_user")
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask")
         self.assertIn("TOKEN CAP", out["systemMessage"])
 
     def test_bash_over_cap_asks_user(self):
-        """Bash command over the token cap should trigger ask_user."""
+        """Bash command over the token cap should prompt the user for approval (ask)."""
         long_command = "echo " + "x" * 8000
         code, out = self.run_hook_with_cap(
             bash(long_command),
             cap=1000
         )
         self.assertEqual(code, 0)
-        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask_user")
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask")
 
     def test_edit_over_cap_asks_user(self):
-        """Edit with large new_string over the token cap should trigger ask_user."""
+        """Edit with large new_string over the token cap should prompt the user for approval (ask)."""
         large_content = "y" * 8000
         code, out = self.run_hook_with_cap(
             edit("/home/user/project/big.py", large_content),
             cap=1000
         )
         self.assertEqual(code, 0)
-        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask_user")
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask")
 
     def test_multiedit_over_cap_asks_user(self):
-        """MultiEdit whose combined edits exceed the token cap should trigger ask_user."""
+        """MultiEdit whose combined edits exceed the token cap should prompt the user for approval (ask)."""
         large_content = "z" * 8000
         code, out = self.run_hook_with_cap(
             multiedit("/home/user/project/big.py", [large_content]),
             cap=1000
         )
         self.assertEqual(code, 0)
-        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask_user")
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask")
 
     def test_no_cap_set_allows_large_write(self):
         """When no token cap is configured, large writes proceed normally."""
@@ -928,7 +992,7 @@ class TestTokenCap(unittest.TestCase):
         stdout = result.stdout.decode().strip()
         if stdout:
             parsed = json.loads(stdout)
-            self.assertNotEqual(parsed.get("hookSpecificOutput", {}).get("permissionDecision"), "ask_user")
+            self.assertNotEqual(parsed.get("hookSpecificOutput", {}).get("permissionDecision"), "ask")
 
     def test_cap_null_allows_large_write(self):
         """When token_cap is explicitly null, large writes proceed normally."""
