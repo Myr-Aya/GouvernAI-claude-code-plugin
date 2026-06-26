@@ -39,7 +39,14 @@ def write(file_path: str, content: str = "") -> dict:
 
 
 def edit(file_path: str, new_string: str = "") -> dict:
-    return {"tool_name": "Edit", "tool_input": {"file_path": file_path, "new_str": new_string}}
+    # Field MUST be "new_string" to match the real Claude Code Edit tool schema.
+    return {"tool_name": "Edit", "tool_input": {"file_path": file_path, "new_string": new_string}}
+
+
+def multiedit(file_path: str, new_strings) -> dict:
+    """MultiEdit payload: an edits[] array of {old_string, new_string}."""
+    edits = [{"old_string": "", "new_string": s} for s in new_strings]
+    return {"tool_name": "MultiEdit", "tool_input": {"file_path": file_path, "edits": edits}}
 
 
 def read(file_path: str) -> dict:
@@ -137,6 +144,40 @@ class TestBlockObfuscated(unittest.TestCase):
     def test_python_exec_obfuscation(self):
         code, out = run_hook(bash("python3 -c 'exec(\"aW1wb3J0IG9z\")'"))
         self.assertEqual(code, 2)
+
+
+class TestDenyOutputContract(unittest.TestCase):
+    """Regression: a deny MUST carry hookEventName == 'PreToolUse'.
+
+    Claude Code silently drops a hookSpecificOutput that omits hookEventName, so a
+    deny without it exits 2 but the tool still proceeds live (skill auto-approve wins).
+    These tests pin the shape of the deny payload, not just the exit code.
+    """
+
+    def _assert_well_formed_deny(self, out):
+        self.assertIsNotNone(out, "deny must print a JSON payload on stdout")
+        hso = out["hookSpecificOutput"]
+        self.assertEqual(hso["hookEventName"], "PreToolUse")
+        self.assertEqual(hso["permissionDecision"], "deny")
+        self.assertTrue(hso.get("permissionDecisionReason"),
+                        "deny should explain itself via permissionDecisionReason")
+
+    def test_bash_deny_payload_shape(self):
+        code, out = run_hook(bash("rm -rf /"))
+        self.assertEqual(code, 2)
+        self._assert_well_formed_deny(out)
+
+    def test_write_credential_deny_payload_shape(self):
+        code, out = run_hook(write("/home/user/project/config.py",
+                                   "API_KEY = 'AKIAIOSFODNN7EXAMPLE'"))
+        self.assertEqual(code, 2)
+        self._assert_well_formed_deny(out)
+
+    def test_edit_credential_deny_payload_shape(self):
+        code, out = run_hook(edit("/home/user/project/config.py",
+                                  "API_KEY = 'AKIAIOSFODNN7EXAMPLE'"))
+        self.assertEqual(code, 2)
+        self._assert_well_formed_deny(out)
 
 
 class TestBlockCredentialExposure(unittest.TestCase):
@@ -398,6 +439,75 @@ class TestWriteSelfModificationVariants(unittest.TestCase):
     def test_edit_tiers_md(self):
         """Editing TIERS.md via Edit tool should be blocked."""
         code, out = run_hook(edit("/home/user/.claude/plugins/gouvernai/skills/gouvernai/TIERS.md", "modified"))
+        self.assertEqual(code, 2)
+
+
+class TestEditMultiEditFieldEnforcement(unittest.TestCase):
+    """Regression: Edit/MultiEdit content must be enforced via the REAL tool fields.
+
+    The Edit tool sends new text in 'new_string' (not 'new_str') and MultiEdit
+    sends an 'edits' array of {old_string, new_string}. Reading the wrong field
+    previously let credential writes and oversized payloads bypass the hook
+    entirely. These tests construct the real fields directly so a helper
+    regression can't hide the bypass.
+    """
+
+    def test_edit_credential_real_new_string_field_blocked(self):
+        """Edit with a credential in the real 'new_string' field must be blocked."""
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {
+                "file_path": "/home/user/project/config.py",
+                "new_string": "API_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+            },
+        }
+        code, out = run_hook(payload)
+        self.assertEqual(code, 2)
+        self.assertIn("BLOCKED", out["systemMessage"])
+
+    def test_edit_legacy_new_str_field_still_blocked(self):
+        """Backward-compat: a stray legacy 'new_str' payload is still scanned."""
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {
+                "file_path": "/home/user/project/config.py",
+                "new_str": "API_KEY = 'AKIAIOSFODNN7EXAMPLE'",
+            },
+        }
+        code, _ = run_hook(payload)
+        self.assertEqual(code, 2)
+
+    def test_multiedit_credential_blocked(self):
+        """MultiEdit with a credential in any edit's new_string must be blocked."""
+        code, out = run_hook(multiedit(
+            "/home/user/project/config.py",
+            ["def foo(): pass", "API_KEY = 'AKIAIOSFODNN7EXAMPLE'"],
+        ))
+        self.assertEqual(code, 2)
+        self.assertIn("BLOCKED", out["systemMessage"])
+
+    def test_multiedit_clean_allowed(self):
+        """MultiEdit with no secrets proceeds normally."""
+        code, _ = run_hook(multiedit(
+            "/home/user/project/main.py",
+            ["def a(): pass", "def b(): pass"],
+        ))
+        self.assertEqual(code, 0)
+
+    def test_multiedit_credential_in_scratch_allowed(self):
+        """Credentials in scratch/ dirs are allowed even via MultiEdit."""
+        code, _ = run_hook(multiedit(
+            "/home/user/project/scratch/test.py",
+            ["key = 'AKIAIOSFODNN7EXAMPLE'"],
+        ))
+        self.assertEqual(code, 0)
+
+    def test_multiedit_self_modification_blocked(self):
+        """Editing a guardrails file via MultiEdit must be blocked."""
+        code, out = run_hook(multiedit(
+            "/home/user/.claude/plugins/gouvernai/scripts/guardrails-enforce.py",
+            ["# hacked"],
+        ))
         self.assertEqual(code, 2)
 
 
@@ -781,10 +891,20 @@ class TestTokenCap(unittest.TestCase):
         self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask_user")
 
     def test_edit_over_cap_asks_user(self):
-        """Edit with large new_str over the token cap should trigger ask_user."""
+        """Edit with large new_string over the token cap should trigger ask_user."""
         large_content = "y" * 8000
         code, out = self.run_hook_with_cap(
             edit("/home/user/project/big.py", large_content),
+            cap=1000
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(out["hookSpecificOutput"]["permissionDecision"], "ask_user")
+
+    def test_multiedit_over_cap_asks_user(self):
+        """MultiEdit whose combined edits exceed the token cap should trigger ask_user."""
+        large_content = "z" * 8000
+        code, out = self.run_hook_with_cap(
+            multiedit("/home/user/project/big.py", [large_content]),
             cap=1000
         )
         self.assertEqual(code, 0)
