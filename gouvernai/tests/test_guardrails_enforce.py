@@ -11,20 +11,41 @@ exit code and (where relevant) the stdout content. Exit 0 = allow, 2 = block.
 
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 
 SCRIPT = os.path.join(os.path.dirname(__file__), "..", "scripts", "guardrails-enforce.py")
 
 
+def _run_script(stdin_bytes: bytes) -> subprocess.CompletedProcess:
+    """Invoke the hook script with *stdin_bytes* on stdin, sandboxed.
+
+    CLAUDE_PROJECT_DIR is pointed at a throwaway temp dir so the hook's
+    block-log writes (guardrails_log.md) land there and get discarded — instead
+    of dirtying the repo's real guardrails_log.md when the suite runs from the
+    project root. The token-cap tests already isolate this way; this brings the
+    default path in line so every hook invocation is sandboxed by construction.
+    """
+    tmpdir = tempfile.mkdtemp(prefix="guardrails-test-")
+    try:
+        env = os.environ.copy()
+        env["CLAUDE_PROJECT_DIR"] = tmpdir
+        return subprocess.run(
+            [sys.executable, SCRIPT],
+            input=stdin_bytes,
+            capture_output=True,
+            env=env,
+        )
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def run_hook(payload: dict) -> tuple[int, dict | None]:
     """Run the hook with *payload* as stdin JSON. Returns (exit_code, parsed_stdout)."""
-    result = subprocess.run(
-        [sys.executable, SCRIPT],
-        input=json.dumps(payload).encode(),
-        capture_output=True,
-    )
+    result = _run_script(json.dumps(payload).encode())
     stdout = result.stdout.decode().strip()
     parsed = json.loads(stdout) if stdout else None
     return result.returncode, parsed
@@ -118,11 +139,7 @@ class TestAllow(unittest.TestCase):
 
     def test_invalid_json_input(self):
         """Unparseable stdin should fail closed — block the action."""
-        result = subprocess.run(
-            [sys.executable, SCRIPT],
-            input=b"not json",
-            capture_output=True,
-        )
+        result = _run_script(b"not json")
         self.assertEqual(result.returncode, 2)
 
 
@@ -742,47 +759,27 @@ class TestFailClosedBehavior(unittest.TestCase):
 
     def test_empty_stdin_allows(self):
         """Completely empty stdin (0 bytes) should exit 0."""
-        result = subprocess.run(
-            [sys.executable, SCRIPT],
-            input=b"",
-            capture_output=True,
-        )
+        result = _run_script(b"")
         self.assertEqual(result.returncode, 0)
 
     def test_whitespace_only_stdin_allows(self):
         """Whitespace-only stdin should exit 0 — treated as empty."""
-        result = subprocess.run(
-            [sys.executable, SCRIPT],
-            input=b"   \n  ",
-            capture_output=True,
-        )
+        result = _run_script(b"   \n  ")
         self.assertEqual(result.returncode, 0)
 
     def test_malformed_json_blocks(self):
         """Malformed JSON should exit 2 — fail closed."""
-        result = subprocess.run(
-            [sys.executable, SCRIPT],
-            input=b"{not valid json",
-            capture_output=True,
-        )
+        result = _run_script(b"{not valid json")
         self.assertEqual(result.returncode, 2)
 
     def test_truncated_json_blocks(self):
         """Truncated JSON should exit 2 — fail closed."""
-        result = subprocess.run(
-            [sys.executable, SCRIPT],
-            input=b'{"tool_name": "Bash", "tool_input": {"command":',
-            capture_output=True,
-        )
+        result = _run_script(b'{"tool_name": "Bash", "tool_input": {"command":')
         self.assertEqual(result.returncode, 2)
 
     def test_valid_json_missing_tool_name_allows(self):
         """Valid JSON but missing tool_name should exit 0 — unknown schema, not a parse error."""
-        result = subprocess.run(
-            [sys.executable, SCRIPT],
-            input=b'{"something": "else"}',
-            capture_output=True,
-        )
+        result = _run_script(b'{"something": "else"}')
         self.assertEqual(result.returncode, 0)
 
 
