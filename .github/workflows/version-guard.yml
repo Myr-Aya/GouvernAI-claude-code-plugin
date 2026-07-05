@@ -1,0 +1,53 @@
+name: version-guard
+
+# Claude Code only pulls a plugin update when plugin.json's "version" changes
+# (an explicit version pins the update signal to that string, not the git SHA —
+# see issue #5). So any change to the enforcement surface must bump the version,
+# or the fix silently never reaches installed users. This workflow enforces that,
+# and keeps plugin.json and marketplace.json in agreement.
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  version-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Manifests agree on version
+        run: |
+          set -euo pipefail
+          plugin_ver="$(jq -r '.version' gouvernai/.claude-plugin/plugin.json)"
+          market_ver="$(jq -r '.plugins[] | select(.name == "gouvernai") | .version' .claude-plugin/marketplace.json)"
+          echo "plugin.json=$plugin_ver  marketplace.json=$market_ver"
+          if [ "$plugin_ver" != "$market_ver" ]; then
+            echo "::error::Version mismatch: plugin.json ($plugin_ver) != marketplace.json ($market_ver). Bump both together."
+            exit 1
+          fi
+
+      - name: Enforcement change requires a version bump
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          manifest="gouvernai/.claude-plugin/plugin.json"
+          changed="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
+          echo "Files changed in this PR:"
+          echo "$changed"
+          if ! echo "$changed" | grep -qE '^gouvernai/(scripts|hooks)/'; then
+            echo "No changes under gouvernai/scripts/ or gouvernai/hooks/ — version bump not required."
+            exit 0
+          fi
+          base_ver="$(git show "$BASE_SHA:$manifest" | jq -r '.version')"
+          head_ver="$(jq -r '.version' "$manifest")"
+          echo "Enforcement surface changed. plugin.json version: base=$base_ver head=$head_ver"
+          if [ "$base_ver" = "$head_ver" ]; then
+            echo "::error::Hook/script changed but $manifest version is still $head_ver. Bump it so 'claude plugin update' ships the fix to installed users (issue #5)."
+            exit 1
+          fi
+          echo "Version bumped $base_ver -> $head_ver. OK."

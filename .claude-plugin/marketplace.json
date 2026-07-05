@@ -10,7 +10,7 @@
     {
       "name": "gouvernai",
       "description": "Achieve flow state safely with Claude Code. Auto-approves ~60% of actions, gates risky operations, hard-blocks dangerous patterns. Dual enforcement: skill layer + deterministic hooks. Token cap for cost governance. 120+ unit tests.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "author": {
         "name": "mindxo"
       },
